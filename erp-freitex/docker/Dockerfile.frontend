@@ -1,24 +1,22 @@
-# Dockerfile para Frontend React
 FROM node:18-alpine
 
-# Definir diretório de trabalho
 WORKDIR /app
 
-# Copiar package.json e package-lock.json
-COPY frontend/package*.json ./
+# Copiar arquivos de dependências
+COPY package*.json ./
 
 # Instalar dependências
 RUN npm ci --only=production
 
 # Copiar código fonte
-COPY frontend/ ./
+COPY . .
 
-# Expor porta 7000
+# Expor porta
 EXPOSE 7000
 
-# Definir variável de ambiente para a porta
+# Variáveis de ambiente
 ENV PORT=7000
 ENV REACT_APP_API_URL=http://localhost:7001
 
-# Comando para iniciar a aplicação
+# Comando para iniciar
 CMD ["npm", "start"]

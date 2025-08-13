@@ -1,44 +1,36 @@
 version: '3.8'
 
 services:
-  # Frontend React
   frontend:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.frontend
+      context: ../frontend
+      dockerfile: ../docker/Dockerfile.frontend
     ports:
       - "7000:7000"
     environment:
+      - PORT=7000
       - REACT_APP_API_URL=http://localhost:7001
-    volumes:
-      - ../frontend:/app
-      - /app/node_modules
     depends_on:
       - backend
     networks:
       - erp-network
 
-  # Backend Node.js
   backend:
     build:
-      context: ..
-      dockerfile: docker/Dockerfile.backend
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
     ports:
       - "7001:7001"
     environment:
+      - PORT=7001
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/erp_freitex?schema=public
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
-      - NODE_ENV=development
-    volumes:
-      - ../backend:/app
-      - /app/node_modules
     depends_on:
       - postgres
       - redis
     networks:
       - erp-network
 
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     ports:
@@ -53,7 +45,6 @@ services:
     networks:
       - erp-network
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     ports:
@@ -63,7 +54,6 @@ services:
     networks:
       - erp-network
 
-  # Adminer (Database Management)
   adminer:
     image: adminer:latest
     ports:

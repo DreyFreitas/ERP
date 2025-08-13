@@ -1,207 +1,158 @@
-# 🐳 Docker - ERP Freitex Softwares
+# 🐳 Docker Setup - ERP Freitex
 
 ## 📋 Visão Geral
 
-Este diretório contém toda a configuração Docker para rodar o ERP Freitex Softwares localmente.
+Este diretório contém todos os arquivos necessários para executar o ERP Freitex usando Docker.
 
-## 🚀 Início Rápido
+## 🚀 Quick Start
 
 ### Pré-requisitos
 - Docker Desktop instalado e rodando
 - Docker Compose disponível
 
-### Comandos Básicos
-
-#### Windows (PowerShell)
-```powershell
-# Navegar para o diretório docker
-cd docker
-
-# Iniciar todos os serviços
+### Iniciar o Sistema
+```bash
+# No Windows (PowerShell)
 .\start.ps1 start
 
-# Ver logs
-.\start.ps1 logs
-
-# Parar serviços
-.\start.ps1 stop
-```
-
-#### Linux/Mac (Bash)
-```bash
-# Navegar para o diretório docker
-cd docker
-
-# Dar permissão de execução
-chmod +x start.sh
-
-# Iniciar todos os serviços
+# No Linux/Mac (Bash)
 ./start.sh start
-
-# Ver logs
-./start.sh logs
-
-# Parar serviços
-./start.sh stop
 ```
 
-## 🌐 Serviços Disponíveis
+## 🏗️ Serviços
 
 | Serviço | Porta | Descrição |
 |---------|-------|-----------|
-| **Frontend** | 7000 | Interface React do ERP |
-| **Backend** | 7001 | API Node.js |
-| **PostgreSQL** | 7002 | Banco de dados |
-| **Redis** | 7003 | Cache (opcional) |
-| **Adminer** | 7004 | Gerenciamento do banco |
+| Frontend | 7000 | Interface React |
+| Backend | 7001 | API Node.js |
+| PostgreSQL | 7002 | Banco de dados |
+| Redis | 7003 | Cache (opcional) |
+| Adminer | 7004 | Gerenciamento do banco |
 
 ## 📁 Estrutura de Arquivos
 
 ```
 docker/
-├── docker-compose.yml      # Configuração principal
-├── Dockerfile.frontend     # Imagem do frontend
-├── Dockerfile.backend      # Imagem do backend
-├── init-db.sql            # Script de inicialização do banco
-├── start.sh               # Script bash para gerenciamento
-├── start.ps1              # Script PowerShell para Windows
-└── README.md              # Esta documentação
+├── docker-compose.yml    # Configuração principal
+├── Dockerfile.frontend   # Imagem do frontend
+├── Dockerfile.backend    # Imagem do backend
+├── init-db.sql          # Script de inicialização do banco
+├── start.sh             # Script bash para gerenciar containers
+├── start.ps1            # Script PowerShell para Windows
+└── README.md            # Esta documentação
 ```
 
 ## 🔧 Comandos Docker Compose
 
-### Iniciar Serviços
+### Comandos Básicos
 ```bash
+# Iniciar todos os serviços
 docker-compose up -d
-```
 
-### Parar Serviços
-```bash
+# Parar todos os serviços
 docker-compose down
-```
 
-### Ver Logs
-```bash
-# Todos os serviços
+# Ver logs
 docker-compose logs -f
 
-# Serviço específico
-docker-compose logs -f frontend
-docker-compose logs -f backend
+# Reconstruir imagens
+docker-compose build
 ```
 
-### Reconstruir Imagens
+### Comandos Avançados
 ```bash
-docker-compose build --no-cache
-```
+# Executar comando no container backend
+docker-compose exec backend npm run migrate
 
-### Limpar Tudo
-```bash
+# Acessar banco de dados
+docker-compose exec postgres psql -U postgres -d erp_freitex
+
+# Limpar tudo (cuidado!)
 docker-compose down -v
 docker system prune -f
 ```
 
-## 🗄️ Banco de Dados
+## 🗄️ Acesso ao Banco de Dados
 
-### Acesso via Adminer
-- **URL**: http://localhost:7004
-- **Sistema**: PostgreSQL
-- **Servidor**: postgres
-- **Usuário**: postgres
-- **Senha**: postgres
-- **Banco**: erp_freitex
+### Via Adminer
+- URL: http://localhost:7004
+- Sistema: PostgreSQL
+- Servidor: postgres
+- Usuário: postgres
+- Senha: postgres
+- Banco: erp_freitex
 
-### Acesso Direto
+### Via linha de comando
 ```bash
 docker-compose exec postgres psql -U postgres -d erp_freitex
 ```
 
 ## 🔍 Troubleshooting
 
-### Porta já em uso
-Se alguma porta estiver em uso, pare o serviço que está usando:
-```bash
-# Windows
-netstat -ano | findstr :7000
-taskkill /PID <PID> /F
+### Problemas Comuns
 
-# Linux/Mac
-lsof -i :7000
-kill -9 <PID>
-```
+1. **Porta já em uso**
+   ```bash
+   # Verificar portas em uso
+   netstat -ano | findstr :7000
+   
+   # Parar processo que está usando a porta
+   taskkill /PID <PID> /F
+   ```
 
-### Containers não iniciam
+2. **Container não inicia**
+   ```bash
+   # Ver logs do container
+   docker-compose logs <service-name>
+   
+   # Reconstruir imagem
+   docker-compose build --no-cache <service-name>
+   ```
+
+3. **Banco de dados não conecta**
+   ```bash
+   # Verificar se PostgreSQL está rodando
+   docker-compose ps postgres
+   
+   # Reiniciar apenas o banco
+   docker-compose restart postgres
+   ```
+
+### Logs Úteis
 ```bash
-# Verificar logs detalhados
+# Logs de todos os serviços
 docker-compose logs
 
-# Reconstruir imagens
-docker-compose build --no-cache
+# Logs de um serviço específico
+docker-compose logs backend
 
-# Limpar volumes
-docker-compose down -v
+# Logs em tempo real
+docker-compose logs -f frontend
 ```
 
-### Problemas de permissão (Linux/Mac)
-```bash
-# Dar permissão aos scripts
-chmod +x start.sh
+## 🔄 Desenvolvimento
 
-# Ajustar permissões do Docker
-sudo usermod -aG docker $USER
-```
+### Hot Reload
+- Frontend: Alterações são refletidas automaticamente
+- Backend: Usa nodemon para reiniciar automaticamente
 
-## 📊 Monitoramento
+### Variáveis de Ambiente
+As variáveis de ambiente estão definidas no `docker-compose.yml`:
+- `DATABASE_URL`: Conexão com PostgreSQL
+- `JWT_SECRET`: Chave para JWT
+- `PORT`: Porta do serviço
 
-### Status dos Containers
-```bash
-docker-compose ps
-```
+## 📝 Notas Importantes
 
-### Uso de Recursos
-```bash
-docker stats
-```
+- **Volumes**: Os dados do PostgreSQL e Redis são persistidos em volumes Docker
+- **Rede**: Todos os serviços estão na rede `erp-network`
+- **Dependências**: Backend depende do PostgreSQL e Redis
+- **Frontend**: Depende do backend estar rodando
 
-### Volumes
-```bash
-docker volume ls
-```
+## 🆘 Suporte
 
-## 🔐 Variáveis de Ambiente
-
-### Frontend (.env)
-```
-PORT=7000
-REACT_APP_API_URL=http://localhost:7001
-```
-
-### Backend (docker-compose.yml)
-```
-DATABASE_URL=postgresql://postgres:postgres@postgres:7002/erp_freitex
-JWT_SECRET=your-super-secret-jwt-key-change-in-production
-NODE_ENV=development
-```
-
-## 🚀 Deploy em Produção
-
-Para deploy em produção, considere:
-
-1. **Alterar senhas** no docker-compose.yml
-2. **Configurar HTTPS** com nginx reverse proxy
-3. **Usar volumes externos** para persistência
-4. **Configurar backup** automático do banco
-5. **Monitoramento** com logs estruturados
-
-## 📞 Suporte
-
-Em caso de problemas:
-
-1. Verifique os logs: `docker-compose logs`
-2. Consulte esta documentação
-3. Verifique se o Docker está rodando
-4. Reinicie os serviços: `docker-compose restart`
-
----
-
-**Próximo passo**: Execute `.\start.ps1 start` (Windows) ou `./start.sh start` (Linux/Mac) para iniciar o ambiente completo!
+Se encontrar problemas:
+1. Verifique se o Docker Desktop está rodando
+2. Execute `docker-compose logs` para ver erros
+3. Tente `docker-compose down && docker-compose up -d`
+4. Se persistir, use `docker-compose build --no-cache`
