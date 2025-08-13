@@ -1,0 +1,139 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// TABELAS DO SISTEMA (Schema: public)
+// ========================================
+
+model Company {
+  id                  String    @id @default(uuid())
+  name                String
+  cnpj                String?   @unique
+  email               String    @unique
+  phone               String?
+  address             String?
+  city                String?
+  state               String?
+  zipCode             String?
+  logoUrl             String?
+  planType            String    @default("basic") // basic, professional, enterprise
+  planStatus          String    @default("active") // active, suspended, cancelled
+  trialEndsAt         DateTime?
+  subscriptionEndsAt  DateTime?
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  // Relacionamentos
+  users               User[]
+  settings            CompanySetting[]
+
+  @@map("companies")
+}
+
+model User {
+  id          String    @id @default(uuid())
+  companyId   String?
+  name        String
+  email       String    @unique
+  passwordHash String
+  role        String    // master, admin, manager, seller, stock, financial
+  permissions Json?
+  isActive    Boolean   @default(true)
+  lastLogin   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relacionamentos
+  company     Company?  @relation(fields: [companyId], references: [id])
+
+  @@map("users")
+}
+
+model CompanySetting {
+  id        String   @id @default(uuid())
+  companyId String
+  settingKey String
+  settingValue Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  @@unique([companyId, settingKey])
+  @@map("company_settings")
+}
+
+// ========================================
+// ENUMS
+// ========================================
+
+enum UserRole {
+  MASTER
+  ADMIN
+  MANAGER
+  SELLER
+  STOCK
+  FINANCIAL
+}
+
+enum PlanType {
+  BASIC
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum PlanStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  PIX
+  BANK_TRANSFER
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+enum SaleStatus {
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+enum MovementType {
+  ENTRY
+  EXIT
+  ADJUSTMENT
+  TRANSFER
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  PAID
+  CANCELLED
+}

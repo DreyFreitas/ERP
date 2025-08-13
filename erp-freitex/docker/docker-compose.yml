@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # Frontend React
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    ports:
+      - "7000:7000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:7001
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - erp-network
+
+  # Backend Node.js
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "7001:7001"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/erp_freitex?schema=public
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - NODE_ENV=development
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - erp-network
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "7002:5432"
+    environment:
+      - POSTGRES_DB=erp_freitex
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - erp-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "7003:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - erp-network
+
+  # Adminer (Database Management)
+  adminer:
+    image: adminer:latest
+    ports:
+      - "7004:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    depends_on:
+      - postgres
+    networks:
+      - erp-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  erp-network:
+    driver: bridge
