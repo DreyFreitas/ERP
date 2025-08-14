@@ -1,15 +1,27 @@
 version: '3.8'
 
 services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    ports:
+      - "7000:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - erp-network
+
   frontend:
     build:
       context: ../frontend
       dockerfile: ../docker/Dockerfile.frontend
-    ports:
-      - "7000:7000"
+    expose:
+      - "7000"
     environment:
       - PORT=7000
-      - REACT_APP_API_URL=http://localhost:7001
+      - REACT_APP_API_URL=http://localhost:7000/api
     depends_on:
       - backend
     networks:
@@ -19,8 +31,8 @@ services:
     build:
       context: ../backend
       dockerfile: ../docker/Dockerfile.backend
-    ports:
-      - "7001:7001"
+    expose:
+      - "7001"
     environment:
       - PORT=7001
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/erp_freitex?schema=public

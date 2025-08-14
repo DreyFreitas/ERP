@@ -1,0 +1,10 @@
+FROM nginx:alpine
+
+# Copiar configuração personalizada
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expor porta 80
+EXPOSE 80
+
+# Comando para iniciar o Nginx
+CMD ["nginx", "-g", "daemon off;"]

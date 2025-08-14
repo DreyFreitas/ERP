@@ -7,12 +7,23 @@ import dotenv from 'dotenv';
 
 // Importar rotas
 import authRoutes from './routes/auth';
+import companyRoutes from './routes/companies';
+import userRoutes from './routes/users';
 
 // Carregar variáveis de ambiente
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 7001;
+
+// Configurar trust proxy para funcionar com Nginx
+app.set('trust proxy', 1);
+
+// CORS - Permitir todas as origens em desenvolvimento
+app.use(cors({
+  origin: true, // Permitir todas as origens
+  credentials: true
+}));
 
 // Middleware de segurança
 app.use(helmet());
@@ -25,14 +36,6 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-// CORS
-app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
-    ? ['https://erpfreitex.com'] 
-    : ['http://localhost:3000', 'http://localhost:7000'],
-  credentials: true
-}));
-
 // Logging
 app.use(morgan('combined'));
 
@@ -40,8 +43,19 @@ app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Rota de teste simples
+app.get('/api/test', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API funcionando!',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Rotas
 app.use('/api/auth', authRoutes);
+app.use('/api/companies', companyRoutes);
+app.use('/api/users', userRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -74,6 +88,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 
 // 404 handler
 app.use('*', (req, res) => {
+  console.log('404 - Rota não encontrada:', req.method, req.originalUrl);
   res.status(404).json({
     success: false,
     message: 'Rota não encontrada'
