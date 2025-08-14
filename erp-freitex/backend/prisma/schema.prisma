@@ -75,6 +75,119 @@ model CompanySetting {
 }
 
 // ========================================
+// TABELAS POR EMPRESA (Schema: tenant_{id})
+// ========================================
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  parentId    String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relacionamentos
+  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Supplier {
+  id            String    @id @default(uuid())
+  name          String
+  cnpj          String?
+  email         String?
+  phone         String?
+  address       String?
+  contactPerson String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  products      Product[]
+
+  @@map("suppliers")
+}
+
+model Product {
+  id                String    @id @default(uuid())
+  sku               String?   @unique
+  name              String
+  description       String?
+  categoryId        String?
+  supplierId        String?
+  barcode           String?
+  costPrice         Decimal?  @db.Decimal(10, 2)
+  salePrice         Decimal   @db.Decimal(10, 2)
+  promotionalPrice  Decimal?  @db.Decimal(10, 2)
+  minStock          Int       @default(0)
+  maxStock          Int?
+  weight            Decimal?  @db.Decimal(8, 3)
+  dimensions        Json?     // {length, width, height}
+  images            Json?     // array de URLs
+  specifications    Json?     // especificações customizadas
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relacionamentos
+  category          Category? @relation(fields: [categoryId], references: [id])
+  supplier          Supplier? @relation(fields: [supplierId], references: [id])
+  variations        ProductVariation[]
+  stockMovements    StockMovement[]
+
+  @@map("products")
+}
+
+model ProductVariation {
+  id            String    @id @default(uuid())
+  productId     String
+  size          String?
+  color         String?
+  model         String?
+  sku           String?   @unique
+  barcode       String?
+  costPrice     Decimal?  @db.Decimal(10, 2)
+  salePrice     Decimal   @db.Decimal(10, 2)
+  stockQuantity Int       @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  product       Product   @relation(fields: [productId], references: [id])
+  stockMovements StockMovement[]
+
+  @@map("product_variations")
+}
+
+model StockMovement {
+  id                String    @id @default(uuid())
+  productId         String
+  variationId       String?
+  movementType      MovementType
+  quantity          Int
+  previousQuantity  Int?
+  newQuantity       Int?
+  unitCost          Decimal?  @db.Decimal(10, 2)
+  totalCost         Decimal?  @db.Decimal(10, 2)
+  referenceDocument String?
+  notes             String?
+  userId            String
+  createdAt         DateTime  @default(now())
+
+  // Relacionamentos
+  product           Product   @relation(fields: [productId], references: [id])
+  variation         ProductVariation? @relation(fields: [variationId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// ========================================
 // ENUMS
 // ========================================
 

@@ -35,19 +35,20 @@ export const authenticateToken = async (
 
     const decoded = jwt.verify(token, jwtSecret) as JWTPayload;
     
-    // Buscar usuário no banco
+    // Buscar usuário no banco com dados da empresa
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        companyId: true,
-        isActive: true,
-        lastLogin: true,
-        createdAt: true,
-        updatedAt: true
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            planStatus: true,
+            trialEndsAt: true,
+            subscriptionEndsAt: true,
+            isActive: true
+          }
+        }
       }
     });
 
