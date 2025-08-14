@@ -9,6 +9,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth';
 import companyRoutes from './routes/companies';
 import userRoutes from './routes/users';
+import companyDashboardRoutes from './routes/company';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -56,6 +57,7 @@ app.get('/api/test', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/company', companyDashboardRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

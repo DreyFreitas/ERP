@@ -33,21 +33,18 @@ export const companyController = {
   async listCompanies(req: Request, res: Response<ApiResponse>) {
     try {
       const companies = await prisma.company.findMany({
-        include: {
-          users: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              isActive: true
-            }
-          },
-          _count: {
-            select: {
-              users: true
-            }
-          }
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          city: true,
+          state: true,
+          planType: true,
+          planStatus: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
         },
         orderBy: {
           createdAt: 'desc'
@@ -76,19 +73,24 @@ export const companyController = {
 
       const company = await prisma.company.findUnique({
         where: { id },
-        include: {
-          users: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              isActive: true,
-              lastLogin: true,
-              createdAt: true
-            }
-          },
-          settings: true
+        select: {
+          id: true,
+          name: true,
+          cnpj: true,
+          email: true,
+          phone: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          logoUrl: true,
+          planType: true,
+          planStatus: true,
+          trialEndsAt: true,
+          subscriptionEndsAt: true,
+          isActive: true,
+          createdAt: true,
+          updatedAt: true
         }
       });
 
@@ -118,10 +120,21 @@ export const companyController = {
   // Criar nova empresa
   async createCompany(req: Request, res: Response<ApiResponse>) {
     try {
-      const data: CreateCompanyData = req.body;
+      const {
+        name,
+        cnpj,
+        email,
+        phone,
+        address,
+        city,
+        state,
+        zipCode,
+        logoUrl,
+        planType = 'basic'
+      } = req.body;
 
       // Validações básicas
-      if (!data.name || !data.email) {
+      if (!name || !email) {
         return res.status(400).json({
           success: false,
           message: 'Nome e email são obrigatórios',
@@ -131,7 +144,7 @@ export const companyController = {
 
       // Verificar se o email já existe
       const existingCompany = await prisma.company.findUnique({
-        where: { email: data.email.toLowerCase() }
+        where: { email: email.toLowerCase() }
       });
 
       if (existingCompany) {
@@ -143,9 +156,9 @@ export const companyController = {
       }
 
       // Verificar se o CNPJ já existe (se fornecido)
-      if (data.cnpj) {
+      if (cnpj) {
         const existingCnpj = await prisma.company.findUnique({
-          where: { cnpj: data.cnpj }
+          where: { cnpj }
         });
 
         if (existingCnpj) {
@@ -160,27 +173,37 @@ export const companyController = {
       // Criar empresa
       const company = await prisma.company.create({
         data: {
-          name: data.name,
-          cnpj: data.cnpj,
-          email: data.email.toLowerCase(),
-          phone: data.phone,
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          zipCode: data.zipCode,
-          planType: data.planType || 'basic',
-          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 dias de trial
+          name,
+          cnpj,
+          email: email.toLowerCase(),
+          phone,
+          address,
+          city,
+          state,
+          zipCode,
+          logoUrl,
+          planType,
+          planStatus: 'active',
+          trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias de trial
+          isActive: true
         },
-        include: {
-          users: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              isActive: true
-            }
-          }
+        select: {
+          id: true,
+          name: true,
+          cnpj: true,
+          email: true,
+          phone: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          logoUrl: true,
+          planType: true,
+          planStatus: true,
+          trialEndsAt: true,
+          subscriptionEndsAt: true,
+          isActive: true,
+          createdAt: true
         }
       });
 
@@ -203,7 +226,7 @@ export const companyController = {
   async updateCompany(req: Request, res: Response<ApiResponse>) {
     try {
       const { id } = req.params;
-      const data: UpdateCompanyData = req.body;
+      const updateData = req.body;
 
       // Verificar se a empresa existe
       const existingCompany = await prisma.company.findUnique({
@@ -219,9 +242,9 @@ export const companyController = {
       }
 
       // Verificar se o email já existe (se estiver sendo alterado)
-      if (data.email && data.email !== existingCompany.email) {
+      if (updateData.email && updateData.email !== existingCompany.email) {
         const emailExists = await prisma.company.findUnique({
-          where: { email: data.email.toLowerCase() }
+          where: { email: updateData.email.toLowerCase() }
         });
 
         if (emailExists) {
@@ -234,9 +257,9 @@ export const companyController = {
       }
 
       // Verificar se o CNPJ já existe (se estiver sendo alterado)
-      if (data.cnpj && data.cnpj !== existingCompany.cnpj) {
+      if (updateData.cnpj && updateData.cnpj !== existingCompany.cnpj) {
         const cnpjExists = await prisma.company.findUnique({
-          where: { cnpj: data.cnpj }
+          where: { cnpj: updateData.cnpj }
         });
 
         if (cnpjExists) {
@@ -248,23 +271,33 @@ export const companyController = {
         }
       }
 
+      // Preparar dados para atualização
+      const dataToUpdate: any = {
+        ...updateData,
+        email: updateData.email ? updateData.email.toLowerCase() : undefined
+      };
+
       // Atualizar empresa
       const updatedCompany = await prisma.company.update({
         where: { id },
-        data: {
-          ...data,
-          email: data.email ? data.email.toLowerCase() : undefined
-        },
-        include: {
-          users: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              isActive: true
-            }
-          }
+        data: dataToUpdate,
+        select: {
+          id: true,
+          name: true,
+          cnpj: true,
+          email: true,
+          phone: true,
+          address: true,
+          city: true,
+          state: true,
+          zipCode: true,
+          logoUrl: true,
+          planType: true,
+          planStatus: true,
+          trialEndsAt: true,
+          subscriptionEndsAt: true,
+          isActive: true,
+          updatedAt: true
         }
       });
 
@@ -283,7 +316,7 @@ export const companyController = {
     }
   },
 
-  // Desativar/Ativar empresa
+  // Ativar/Desativar empresa
   async toggleCompanyStatus(req: Request, res: Response<ApiResponse>) {
     try {
       const { id } = req.params;
@@ -305,16 +338,12 @@ export const companyController = {
         data: {
           isActive: !company.isActive
         },
-        include: {
-          users: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              role: true,
-              isActive: true
-            }
-          }
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isActive: true,
+          updatedAt: true
         }
       });
 
@@ -333,45 +362,94 @@ export const companyController = {
     }
   },
 
-  // Obter estatísticas das empresas
+  // Dashboard da empresa
+  async getCompanyDashboard(req: Request, res: Response<ApiResponse>) {
+    try {
+      const userId = (req as any).user.id;
+      
+      // Buscar usuário e sua empresa
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          company: true
+        }
+      });
+
+      if (!user || !user.companyId || !user.company) {
+        return res.status(404).json({
+          success: false,
+          message: 'Usuário não associado a uma empresa ou empresa não encontrada.',
+          data: null
+        });
+      }
+
+      // Dados mockados para demonstração
+      // Em produção, esses dados viriam das tabelas específicas da empresa
+      const dashboardData = {
+        totalSales: 156,
+        totalProducts: 342,
+        lowStockProducts: 8,
+        totalCustomers: 89,
+        monthlyRevenue: 45250.00,
+        pendingPayments: 12500.00,
+        company: {
+          id: user.company.id,
+          name: user.company.name,
+          email: user.company.email
+        }
+      };
+
+      return res.json({
+        success: true,
+        message: 'Dados do dashboard carregados com sucesso',
+        data: dashboardData
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dashboard da empresa:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        data: null
+      });
+    }
+  },
+
+  // Estatísticas para o dashboard master
   async getCompanyStats(req: Request, res: Response<ApiResponse>) {
     try {
+      // Buscar estatísticas das empresas
       const [
         totalCompanies,
         activeCompanies,
         suspendedCompanies,
-        companiesThisMonth,
-        totalUsers
+        companiesThisMonth
       ] = await Promise.all([
         prisma.company.count(),
         prisma.company.count({ where: { isActive: true } }),
-        prisma.company.count({ where: { planStatus: 'suspended' } }),
+        prisma.company.count({ where: { isActive: false } }),
         prisma.company.count({
           where: {
             createdAt: {
               gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
             }
           }
-        }),
-        prisma.user.count({ where: { role: { not: 'master' } } })
+        })
       ]);
 
       const stats = {
         totalCompanies,
         activeCompanies,
         suspendedCompanies,
-        companiesThisMonth,
-        totalUsers,
-        inactiveCompanies: totalCompanies - activeCompanies
+        companiesThisMonth
       };
 
       return res.json({
         success: true,
-        message: 'Estatísticas obtidas com sucesso',
+        message: 'Estatísticas carregadas com sucesso',
         data: stats
       });
     } catch (error) {
-      console.error('Erro ao obter estatísticas:', error);
+      console.error('Erro ao carregar estatísticas:', error);
       return res.status(500).json({
         success: false,
         message: 'Erro interno do servidor',

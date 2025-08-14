@@ -20,7 +20,7 @@ Criar um sistema ERP completo para a loja de roupas do pai do desenvolvedor, mas
 - **UI Library**: Material-UI (MUI)
 - **Design System**: Cores da marca (#001f40, #00c7cd) + paleta complementar
 - **Estado**: Context API ou Redux Toolkit
-- **Roteamento**: React Router
+- **Roteamento**: React Router com estrutura de layout único
 - **Formulários**: React Hook Form + Yup
 
 ### Backend
@@ -211,6 +211,51 @@ Criar um sistema ERP completo para a loja de roupas do pai do desenvolvedor, mas
 - Cache Redis (futuro)
 - Lazy loading
 
+## 🚀 Estrutura de Roteamento (PADRÃO OBRIGATÓRIO)
+
+### **Estrutura de Layout Único - SEMPRE USAR ESTE PADRÃO**
+
+Para evitar recarregamento de página e garantir navegação suave, **SEMPRE** usar estrutura de layout único:
+
+#### ✅ **CORRETO - Layout Único:**
+```jsx
+// Componente de rotas com layout único
+const CompanyRoutes: React.FC = () => {
+  return (
+    <CompanyLayout>
+      <Routes>
+        <Route path="/company/dashboard" element={<CompanyDashboard />} />
+        <Route path="/company/products" element={<ProductsPage />} />
+        <Route path="/company/stock" element={<StockPage />} />
+        // ... mais rotas
+      </Routes>
+    </CompanyLayout>
+  );
+};
+
+// Rota principal com wildcard
+<Route path="/company/*" element={<CompanyRoutes />} />
+```
+
+#### ❌ **INCORRETO - Layout por rota (causa recarregamento):**
+```jsx
+// NUNCA fazer assim - cada rota com seu próprio layout
+<Route path="/company/dashboard" element={<CompanyLayout><CompanyDashboard /></CompanyLayout>} />
+<Route path="/company/products" element={<CompanyLayout><ProductsPage /></CompanyLayout>} />
+<Route path="/company/stock" element={<CompanyLayout><StockPage /></CompanyLayout>} />
+```
+
+### **Benefícios do Layout Único:**
+- ✅ Navegação suave sem recarregamento
+- ✅ Performance melhor (sem re-renderização)
+- ✅ Experiência do usuário consistente
+- ✅ Igual ao dashboard master
+
+### **Aplicar em TODOS os módulos:**
+- Dashboard Master ✅ (já está correto)
+- Dashboard Empresa ✅ (corrigido)
+- Todos os futuros módulos devem seguir este padrão
+
 ## 📁 Estrutura de Pastas
 
 ```
@@ -298,6 +343,13 @@ erp-freitex/
 - Usuário master pode gerenciar todas as empresas
 - Sistema de assinatura com corte automático
 - Backup diário de todos os dados
+
+### Padrões de Desenvolvimento OBRIGATÓRIOS
+- **Layout Único**: SEMPRE usar estrutura de layout único para evitar recarregamento
+- **Navegação Suave**: Usar React Router com `navigate()` em vez de `window.location.href`
+- **Consistência Visual**: Seguir o mesmo padrão do dashboard master
+- **Performance**: Evitar re-renderizações desnecessárias
+- **Experiência do Usuário**: Navegação fluida sem piscadas ou recarregamentos
 
 ### Limitações Técnicas
 - PostgreSQL como único banco de dados
