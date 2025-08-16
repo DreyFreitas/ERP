@@ -38,6 +38,8 @@ model Company {
   settings            CompanySetting[]
   products            Product[]
   categories          Category[]
+  customers           Customer[]
+  sales               Sale[]
 
   @@map("companies")
 }
@@ -113,8 +115,6 @@ model Supplier {
 
   // Relacionamentos
   products      Product[]
-  customers     Customer[]
-  sales         Sale[]
 
   @@map("suppliers")
 }

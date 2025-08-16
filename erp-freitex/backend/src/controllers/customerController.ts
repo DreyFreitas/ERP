@@ -1,7 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../lib/prisma';
 
 export class CustomerController {
   // Listar todos os clientes da empresa
@@ -57,7 +55,7 @@ export class CustomerController {
         const totalPurchases = customer.sales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
         const lastPurchase = customer.sales.length > 0 ? customer.sales[0].createdAt : null;
         const openAccounts = customer.sales.filter(sale => 
-          sale.paymentStatus === 'PENDING' || sale.paymentStatus === 'PARTIAL'
+          sale.paymentStatus === 'PENDING'
         );
         const totalOpenAmount = openAccounts.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
 
@@ -147,7 +145,7 @@ export class CustomerController {
       const totalPurchases = customer.sales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
       const lastPurchase = customer.sales.length > 0 ? customer.sales[0].createdAt : null;
       const openAccounts = customer.sales.filter(sale => 
-        sale.paymentStatus === 'PENDING' || sale.paymentStatus === 'PARTIAL'
+        sale.paymentStatus === 'PENDING'
       );
       const totalOpenAmount = openAccounts.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
 
@@ -444,10 +442,7 @@ export class CustomerController {
           customerId: id,
           companyId: companyId,
           isActive: true,
-          OR: [
-            { paymentStatus: 'PENDING' },
-            { paymentStatus: 'PARTIAL' }
-          ]
+          paymentStatus: 'PENDING'
         },
         include: {
           items: {
@@ -519,10 +514,7 @@ export class CustomerController {
             sales: {
               some: {
                 isActive: true,
-                OR: [
-                  { paymentStatus: 'PENDING' },
-                  { paymentStatus: 'PARTIAL' }
-                ]
+                paymentStatus: 'PENDING'
               }
             }
           }
@@ -531,10 +523,7 @@ export class CustomerController {
           where: {
             companyId: companyId,
             isActive: true,
-            OR: [
-              { paymentStatus: 'PENDING' },
-              { paymentStatus: 'PARTIAL' }
-            ]
+            paymentStatus: 'PENDING'
           },
           _sum: {
             totalAmount: true
@@ -547,7 +536,7 @@ export class CustomerController {
         activeCustomers,
         customersWithPurchases,
         customersWithOpenAccounts,
-        totalOpenAmount: totalOpenAmount._sum.totalAmount || 0
+        totalOpenAmount: totalOpenAmount._sum?.totalAmount || 0
       };
 
       res.status(200).json({

@@ -20,7 +20,7 @@ INSERT INTO customers (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa (substitua pelo ID correto)
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     'João Silva',
     '123.456.789-00',
     'joao.silva@email.com',
@@ -55,7 +55,7 @@ INSERT INTO customers (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa (substitua pelo ID correto)
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     'Maria Santos',
     '987.654.321-00',
     'maria.santos@email.com',
@@ -90,7 +90,7 @@ INSERT INTO customers (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa (substitua pelo ID correto)
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     'Pedro Oliveira',
     '456.789.123-00',
     'pedro.oliveira@email.com',
@@ -125,7 +125,7 @@ INSERT INTO customers (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa (substitua pelo ID correto)
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     'Ana Costa',
     '789.123.456-00',
     'ana.costa@email.com',
@@ -162,7 +162,7 @@ INSERT INTO sales (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     (SELECT id FROM customers WHERE name = 'João Silva' LIMIT 1), -- ID do cliente
     'VDA-2024-001',
     1250.00,
@@ -193,7 +193,7 @@ INSERT INTO sales (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     (SELECT id FROM customers WHERE name = 'Maria Santos' LIMIT 1), -- ID do cliente
     'VDA-2024-002',
     890.00,
@@ -224,7 +224,7 @@ INSERT INTO sales (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     (SELECT id FROM customers WHERE name = 'João Silva' LIMIT 1), -- ID do cliente
     'VDA-2024-003',
     750.00,
@@ -255,7 +255,7 @@ INSERT INTO sales (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    '61984ead-9a44-42fe-bba6-f4349d559b1b', -- ID da empresa
+    '34f6cf4f-8399-41d9-b2b8-cd6b22e9d213', -- ID da empresa
     (SELECT id FROM customers WHERE name = 'Pedro Oliveira' LIMIT 1), -- ID do cliente
     'VDA-2024-004',
     2100.00,

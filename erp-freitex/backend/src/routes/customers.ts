@@ -1,11 +1,11 @@
 import { Router } from 'express';
 import { customerController } from '../controllers/customerController';
-import { authMiddleware } from '../middleware/auth';
+import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
 // Aplicar middleware de autenticação em todas as rotas
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 // Rotas de clientes
 router.get('/', customerController.listCustomers);
