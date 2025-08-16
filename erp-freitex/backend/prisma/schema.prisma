@@ -36,6 +36,8 @@ model Company {
   // Relacionamentos
   users               User[]
   settings            CompanySetting[]
+  products            Product[]
+  categories          Category[]
 
   @@map("companies")
 }
@@ -80,6 +82,7 @@ model CompanySetting {
 
 model Category {
   id          String    @id @default(uuid())
+  companyId   String    // Relacionamento com empresa
   name        String
   description String?
   parentId    String?
@@ -88,6 +91,7 @@ model Category {
   updatedAt   DateTime  @updatedAt
 
   // Relacionamentos
+  company     Company   @relation(fields: [companyId], references: [id])
   parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   products    Product[]
@@ -109,18 +113,21 @@ model Supplier {
 
   // Relacionamentos
   products      Product[]
+  customers     Customer[]
+  sales         Sale[]
 
   @@map("suppliers")
 }
 
 model Product {
   id                String    @id @default(uuid())
-  sku               String?   @unique
+  companyId         String    // Relacionamento com empresa
+  sku               String?   // Removido @unique - agora pode ser duplicado entre empresas
   name              String
   description       String?
   categoryId        String?
   supplierId        String?
-  barcode           String?
+  barcode           String?   // Removido @unique - agora pode ser duplicado entre empresas
   costPrice         Decimal?  @db.Decimal(10, 2)
   salePrice         Decimal   @db.Decimal(10, 2)
   promotionalPrice  Decimal?  @db.Decimal(10, 2)
@@ -135,11 +142,16 @@ model Product {
   updatedAt         DateTime  @updatedAt
 
   // Relacionamentos
+  company           Company   @relation(fields: [companyId], references: [id])
   category          Category? @relation(fields: [categoryId], references: [id])
   supplier          Supplier? @relation(fields: [supplierId], references: [id])
   variations        ProductVariation[]
   stockMovements    StockMovement[]
+  saleItems         SaleItem[]
 
+  // Índices compostos para garantir unicidade por empresa
+  @@unique([companyId, sku], name: "unique_sku_per_company")
+  @@unique([companyId, barcode], name: "unique_barcode_per_company")
   @@map("products")
 }
 
@@ -149,8 +161,8 @@ model ProductVariation {
   size          String?
   color         String?
   model         String?
-  sku           String?   @unique
-  barcode       String?
+  sku           String?   // Removido @unique - agora pode ser duplicado entre empresas
+  barcode       String?   // Removido @unique - agora pode ser duplicado entre empresas
   costPrice     Decimal?  @db.Decimal(10, 2)
   salePrice     Decimal   @db.Decimal(10, 2)
   stockQuantity Int       @default(0)
@@ -161,7 +173,11 @@ model ProductVariation {
   // Relacionamentos
   product       Product   @relation(fields: [productId], references: [id])
   stockMovements StockMovement[]
+  saleItems     SaleItem[]
 
+  // Índices compostos para garantir unicidade por empresa (através do produto)
+  @@unique([productId, sku], name: "unique_variation_sku_per_product")
+  @@unique([productId, barcode], name: "unique_variation_barcode_per_product")
   @@map("product_variations")
 }
 
@@ -185,6 +201,77 @@ model StockMovement {
   variation         ProductVariation? @relation(fields: [variationId], references: [id])
 
   @@map("stock_movements")
+}
+
+model Customer {
+  id          String    @id @default(uuid())
+  companyId   String
+  name        String
+  cpfCnpj     String?
+  email       String?
+  phone       String?
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  birthDate   DateTime?
+  gender      String?
+  notes       String?
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relacionamentos
+  company     Company   @relation(fields: [companyId], references: [id])
+  sales       Sale[]
+
+  // Índices compostos para garantir unicidade por empresa
+  @@unique([companyId, cpfCnpj], name: "unique_customer_cpf_per_company")
+  @@unique([companyId, email], name: "unique_customer_email_per_company")
+  @@map("customers")
+}
+
+model Sale {
+  id            String        @id @default(uuid())
+  companyId     String
+  customerId    String?
+  saleNumber    String        @unique
+  totalAmount   Decimal       @db.Decimal(10, 2)
+  discount      Decimal?      @db.Decimal(10, 2)
+  paymentMethod PaymentMethod
+  paymentStatus PaymentStatus @default(PENDING)
+  saleStatus    SaleStatus    @default(COMPLETED)
+  dueDate       DateTime?
+  notes         String?
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relacionamentos
+  company       Company       @relation(fields: [companyId], references: [id])
+  customer      Customer?     @relation(fields: [customerId], references: [id])
+  items         SaleItem[]
+
+  @@map("sales")
+}
+
+model SaleItem {
+  id          String   @id @default(uuid())
+  saleId      String
+  productId   String
+  variationId String?
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10, 2)
+  totalPrice  Decimal  @db.Decimal(10, 2)
+  discount    Decimal? @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+
+  // Relacionamentos
+  sale        Sale     @relation(fields: [saleId], references: [id])
+  product     Product  @relation(fields: [productId], references: [id])
+  variation   ProductVariation? @relation(fields: [variationId], references: [id])
+
+  @@map("sale_items")
 }
 
 // ========================================

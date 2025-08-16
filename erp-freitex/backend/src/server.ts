@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
+import path from 'path';
 
 // Importar rotas
 import authRoutes from './routes/auth';
@@ -11,6 +12,10 @@ import companyRoutes from './routes/companies';
 import userRoutes from './routes/users';
 import companyDashboardRoutes from './routes/company';
 import productRoutes from './routes/products';
+import categoryRoutes from './routes/categories';
+import uploadRoutes from './routes/upload';
+import stockRoutes from './routes/stock';
+import customerRoutes from './routes/customers';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -60,6 +65,13 @@ app.use('/api/companies', companyRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/company', companyDashboardRoutes);
 app.use('/api/products', productRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/upload', uploadRoutes);
+app.use('/api/stock', stockRoutes);
+app.use('/api/customers', customerRoutes);
+
+// Servir arquivos estáticos (uploads) - DEPOIS das rotas da API
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Health check
 app.get('/health', (req, res) => {

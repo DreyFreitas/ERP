@@ -18,6 +18,14 @@ interface CreateProductData {
   dimensions?: any;
   images?: string[];
   specifications?: any;
+  variations?: Array<{
+    size?: string;
+    color?: string;
+    model?: string;
+    sku?: string;
+    salePrice: number;
+    stockQuantity: number;
+  }>;
 }
 
 interface UpdateProductData {
@@ -55,6 +63,7 @@ export const productController = {
 
       const products = await prisma.product.findMany({
         where: {
+          companyId: user.company.id,
           isActive: true
         },
         include: {
@@ -119,8 +128,11 @@ export const productController = {
         });
       }
 
-      const product = await prisma.product.findUnique({
-        where: { id },
+      const product = await prisma.product.findFirst({
+        where: { 
+          id,
+          companyId: user.company.id
+        },
         include: {
           category: {
             select: {
@@ -199,16 +211,19 @@ export const productController = {
         });
       }
 
-      // Verificar se SKU já existe (se fornecido)
+      // Verificar se SKU já existe na mesma empresa (se fornecido)
       if (productData.sku) {
-        const existingProduct = await prisma.product.findUnique({
-          where: { sku: productData.sku }
+        const existingProduct = await prisma.product.findFirst({
+          where: { 
+            sku: productData.sku,
+            companyId: user.company.id
+          }
         });
 
         if (existingProduct) {
           return res.status(400).json({
             success: false,
-            message: 'SKU já existe',
+            message: 'SKU já existe nesta empresa',
             data: null
           });
         }
@@ -216,6 +231,7 @@ export const productController = {
 
       const product = await prisma.product.create({
         data: {
+          companyId: user.company.id,
           sku: productData.sku,
           name: productData.name,
           description: productData.description,
@@ -231,7 +247,18 @@ export const productController = {
           dimensions: productData.dimensions,
           images: productData.images,
           specifications: productData.specifications,
-          isActive: true
+          isActive: true,
+          variations: productData.variations ? {
+            create: productData.variations.map(variation => ({
+              size: variation.size,
+              color: variation.color,
+              model: variation.model,
+              sku: variation.sku,
+              salePrice: variation.salePrice,
+              stockQuantity: variation.stockQuantity,
+              isActive: true
+            }))
+          } : undefined
         },
         include: {
           category: {
@@ -244,6 +271,20 @@ export const productController = {
             select: {
               id: true,
               name: true
+            }
+          },
+          variations: {
+            where: {
+              isActive: true
+            },
+            select: {
+              id: true,
+              sku: true,
+              size: true,
+              color: true,
+              model: true,
+              stockQuantity: true,
+              salePrice: true
             }
           }
         }
@@ -279,9 +320,12 @@ export const productController = {
         });
       }
 
-      // Verificar se o produto existe
-      const existingProduct = await prisma.product.findUnique({
-        where: { id }
+      // Verificar se o produto existe e pertence à empresa
+      const existingProduct = await prisma.product.findFirst({
+        where: { 
+          id,
+          companyId: user.company.id
+        }
       });
 
       if (!existingProduct) {
@@ -292,16 +336,19 @@ export const productController = {
         });
       }
 
-      // Verificar se SKU já existe (se fornecido e diferente do atual)
+      // Verificar se SKU já existe na mesma empresa (se fornecido e diferente do atual)
       if (updateData.sku && updateData.sku !== existingProduct.sku) {
-        const productWithSku = await prisma.product.findUnique({
-          where: { sku: updateData.sku }
+        const productWithSku = await prisma.product.findFirst({
+          where: { 
+            sku: updateData.sku,
+            companyId: user.company.id
+          }
         });
 
         if (productWithSku) {
           return res.status(400).json({
             success: false,
-            message: 'SKU já existe',
+            message: 'SKU já existe nesta empresa',
             data: null
           });
         }
@@ -355,9 +402,12 @@ export const productController = {
         });
       }
 
-      // Verificar se o produto existe
-      const existingProduct = await prisma.product.findUnique({
-        where: { id }
+      // Verificar se o produto existe e pertence à empresa
+      const existingProduct = await prisma.product.findFirst({
+        where: { 
+          id,
+          companyId: user.company.id
+        }
       });
 
       if (!existingProduct) {
