@@ -40,6 +40,10 @@ model Company {
   categories          Category[]
   customers           Customer[]
   sales               Sale[]
+  financialAccounts   FinancialAccount[]
+  financialTransactions FinancialTransaction[]
+  paymentMethods      PaymentMethod[]
+  paymentTerms        PaymentTerm[]
 
   @@map("companies")
 }
@@ -238,7 +242,7 @@ model Sale {
   saleNumber    String        @unique
   totalAmount   Decimal       @db.Decimal(10, 2)
   discount      Decimal?      @db.Decimal(10, 2)
-  paymentMethod PaymentMethod
+  paymentMethodId String
   paymentStatus PaymentStatus @default(PENDING)
   saleStatus    SaleStatus    @default(COMPLETED)
   dueDate       DateTime?
@@ -250,6 +254,7 @@ model Sale {
   // Relacionamentos
   company       Company       @relation(fields: [companyId], references: [id])
   customer      Customer?     @relation(fields: [customerId], references: [id])
+  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
   items         SaleItem[]
 
   @@map("sales")
@@ -272,6 +277,86 @@ model SaleItem {
   variation   ProductVariation? @relation(fields: [variationId], references: [id])
 
   @@map("sale_items")
+}
+
+model FinancialAccount {
+  id            String    @id @default(uuid())
+  companyId     String
+  name          String
+  accountType   AccountType
+  initialBalance Decimal   @db.Decimal(10, 2) @default(0)
+  currentBalance Decimal   @db.Decimal(10, 2) @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relacionamentos
+  company       Company   @relation(fields: [companyId], references: [id])
+  transactions  FinancialTransaction[]
+
+  @@map("financial_accounts")
+}
+
+model FinancialTransaction {
+  id                String            @id @default(uuid())
+  companyId         String
+  accountId         String
+  transactionType   TransactionType
+  description       String
+  amount            Decimal           @db.Decimal(10, 2)
+  dueDate           DateTime?
+  paymentDate       DateTime?
+  status            TransactionStatus @default(PENDING)
+  category          String?
+  referenceDocument String?
+  notes             String?
+  userId            String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  // Relacionamentos
+  company           Company           @relation(fields: [companyId], references: [id])
+  account           FinancialAccount  @relation(fields: [accountId], references: [id])
+
+  @@map("financial_transactions")
+}
+
+// Configurações de vendas por empresa
+model PaymentMethod {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String   // Ex: "Dinheiro", "PIX", "Cartão de Crédito"
+  description String?
+  isActive    Boolean  @default(true)
+  fee         Decimal? @db.Decimal(5, 2) // Taxa em porcentagem
+  color       String?  // Cor para identificação no PDV
+  sortOrder   Int      @default(0) // Ordem de exibição
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  company     Company  @relation(fields: [companyId], references: [id])
+  sales       Sale[]
+
+  @@map("payment_methods")
+}
+
+model PaymentTerm {
+  id          String   @id @default(uuid())
+  companyId   String
+  name        String   // Ex: "À vista", "30 dias", "60 dias"
+  days        Int      @default(0) // 0 = à vista
+  description String?
+  isActive    Boolean  @default(true)
+  interest    Decimal? @db.Decimal(5, 2) // Juros em porcentagem
+  sortOrder   Int      @default(0) // Ordem de exibição
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  company     Company  @relation(fields: [companyId], references: [id])
+
+  @@map("payment_terms")
 }
 
 // ========================================
@@ -299,13 +384,7 @@ enum PlanStatus {
   CANCELLED
 }
 
-enum PaymentMethod {
-  CASH
-  CREDIT_CARD
-  DEBIT_CARD
-  PIX
-  BANK_TRANSFER
-}
+// Enum PaymentMethod removido - usando modelo PaymentMethod em seu lugar
 
 enum PaymentStatus {
   PENDING
@@ -336,4 +415,12 @@ enum TransactionStatus {
   PENDING
   PAID
   CANCELLED
+}
+
+enum AccountType {
+  CASH
+  BANK
+  CREDIT_CARD
+  RECEIVABLE
+  PAYABLE
 }

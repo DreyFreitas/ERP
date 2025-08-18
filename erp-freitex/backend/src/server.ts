@@ -16,6 +16,8 @@ import categoryRoutes from './routes/categories';
 import uploadRoutes from './routes/upload';
 import stockRoutes from './routes/stock';
 import customerRoutes from './routes/customers';
+import financialRoutes from './routes/financial';
+import settingsRoutes from './routes/settings';
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -69,6 +71,8 @@ app.use('/api/categories', categoryRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/customers', customerRoutes);
+app.use('/api/financial', financialRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Servir arquivos estáticos (uploads) - DEPOIS das rotas da API
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
