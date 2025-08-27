@@ -19,6 +19,39 @@ Este diretório contém todos os arquivos necessários para executar o ERP Freit
 ./start.sh start
 ```
 
+## 🗄️ Migrações do Prisma
+
+### Aplicar Migrações
+```bash
+# No Windows (PowerShell)
+.\apply-migrations.ps1
+
+# No Linux/Mac (Bash)
+docker-compose exec backend npx prisma migrate deploy
+```
+
+### Criar Nova Migração
+```bash
+# Acessar o container backend
+docker-compose exec backend bash
+
+# Criar nova migração
+npx prisma migrate dev --name nome_da_migracao
+
+# Sair do container
+exit
+```
+
+### Verificar Status das Migrações
+```bash
+docker-compose exec backend npx prisma migrate status
+```
+
+### Gerar Cliente Prisma
+```bash
+docker-compose exec backend npx prisma generate
+```
+
 ## 🏗️ Serviços
 
 | Serviço | Porta | Descrição |

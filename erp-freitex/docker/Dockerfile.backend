@@ -8,6 +8,9 @@ COPY package*.json ./
 # Instalar dependências
 RUN npm ci --only=production
 
+# Copiar arquivo .env primeiro (para garantir que está disponível)
+COPY .env ./
+
 # Copiar código fonte
 COPY . .
 

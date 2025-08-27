@@ -41,6 +41,7 @@ services:
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
     volumes:
       - ../backend:/app
+      - ../backend/.env:/app/.env
       - uploads_data:/app/uploads
     depends_on:
       - postgres
