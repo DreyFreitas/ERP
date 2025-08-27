@@ -14,7 +14,16 @@ interface CreateSaleData {
   paymentMethodId: string;
   paymentTermId?: string;
   discount?: number;
+  discountAmount?: number;
+  discountType?: 'percentage' | 'fixed';
   notes?: string;
+  mixedPayments?: Array<{
+    methodId: string;
+    amount: number;
+    originalAmount: number;
+    fee?: number;
+    paymentTermId?: string;
+  }>;
 }
 
 interface UpdateSaleData {
@@ -396,7 +405,40 @@ export const saleController = {
         return sum + itemTotal;
       }, 0);
 
-      const totalAmount = itemsTotal - (saleData.discount || 0);
+      // Calcular desconto
+      let discountValue = 0;
+      if (saleData.discountAmount && saleData.discountType) {
+        if (saleData.discountType === 'percentage') {
+          discountValue = (itemsTotal * saleData.discountAmount) / 100;
+        } else {
+          discountValue = saleData.discountAmount;
+        }
+      } else {
+        discountValue = saleData.discount || 0;
+      }
+
+      const subtotalAfterDiscount = itemsTotal - discountValue;
+
+      // Calcular taxas de pagamento
+      let totalFees = 0;
+      let finalAmount = subtotalAfterDiscount;
+
+      if (saleData.mixedPayments && saleData.mixedPayments.length > 0) {
+        // Calcular taxas dos pagamentos mistos
+        totalFees = saleData.mixedPayments.reduce((sum, payment) => {
+          const fee = payment.fee || 0;
+          const feeAmount = (payment.originalAmount * fee) / 100;
+          return sum + feeAmount;
+        }, 0);
+        finalAmount = subtotalAfterDiscount + totalFees;
+      } else {
+        // Calcular taxa do método de pagamento único
+        const fee = Number(paymentMethod.fee) || 0;
+        if (fee > 0) {
+          totalFees = (subtotalAfterDiscount * fee) / 100;
+          finalAmount = subtotalAfterDiscount + totalFees;
+        }
+      }
 
       // Determinar o status do pagamento baseado no método de pagamento
       let paymentStatus: 'PENDING' | 'PAID' = 'PENDING';
@@ -412,8 +454,11 @@ export const saleController = {
           companyId: user.companyId,
           customerId: saleData.customerId,
           saleNumber,
-          totalAmount,
-          discount: saleData.discount || 0,
+          totalAmount: subtotalAfterDiscount,
+          discount: discountValue,
+          discountType: saleData.discountType,
+          totalFees,
+          finalAmount,
           paymentMethodId: saleData.paymentMethodId,
           paymentTermId: saleData.paymentTermId,
           paymentStatus,
@@ -515,7 +560,7 @@ export const saleController = {
             accountId: targetAccount.id,
             transactionType: 'INCOME',
             description: `Venda ${saleNumber} - ${saleData.customerId ? 'Com cliente' : 'Sem cliente'}`,
-            amount: totalAmount,
+            amount: finalAmount, // Usar finalAmount para a transação financeira
             paymentDate: new Date(),
             status: paymentStatus === 'PAID' ? 'PAID' : 'PENDING',
             category: 'Vendas',
@@ -530,7 +575,7 @@ export const saleController = {
           where: { id: targetAccount.id },
           data: {
             currentBalance: {
-              increment: totalAmount
+              increment: finalAmount
             }
           }
         });
