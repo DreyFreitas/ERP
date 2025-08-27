@@ -1,0 +1,21 @@
+﻿=== COMPROVANTE DE VENDA ===
+ERP FREITEX SOFTWARES
+Data: 21/08/2025 10:24:36
+
+Venda #3659
+Vendedor: Teste AutomÃ¡tico
+
+ITENS:
+- Produto Teste 1    R$ 50,00
+  Qtd: 2            R$ 100,00
+- Produto Teste 2    R$ 30,00
+  Qtd: 1            R$ 30,00
+
+TOTAL:              R$ 130,00
+Recebido:           R$ 150,00
+Troco:              R$ 20,00
+
+Obrigado pela preferÃªncia!
+Volte sempre!
+
+21/08/2025 10:24:36

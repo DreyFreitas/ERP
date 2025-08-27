@@ -10,6 +10,7 @@ router.use(authenticateToken);
 
 // Rotas de movimentação de estoque
 router.post('/entry', stockController.registerEntry);
+router.post('/entry/batch', stockController.registerBatchEntry);
 router.post('/exit', stockController.registerExit);
 router.post('/adjust', stockController.adjustStock);
 

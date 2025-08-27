@@ -52,5 +52,12 @@ router.delete('/transactions/:id', financialController.deleteTransaction);
 // Obter estatísticas financeiras
 router.get('/stats', financialController.getFinancialStats);
 
+// ========================================
+// ROTAS DE TRANSAÇÕES RECORRENTES
+// ========================================
+
+// Gerar transações recorrentes
+router.post('/transactions/recurring/generate', financialController.generateRecurringTransactions);
+
 export default router;
 

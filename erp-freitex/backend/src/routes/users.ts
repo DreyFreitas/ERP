@@ -11,6 +11,9 @@ router.use(requireMaster);
 // GET /api/users - Listar todos os usuários (masters e por empresa)
 router.get('/', userController.listAllUsers);
 
+// GET /api/users/stats - Obter estatísticas de usuários
+router.get('/stats', userController.getUserStats);
+
 // GET /api/users/company/:companyId - Listar usuários de uma empresa
 router.get('/company/:companyId', userController.listUsersByCompany);
 

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,95 +7,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ========================================
-// TABELAS DO SISTEMA (Schema: public)
-// ========================================
-
 model Company {
-  id                  String    @id @default(uuid())
-  name                String
-  cnpj                String?   @unique
-  email               String    @unique
-  phone               String?
-  address             String?
-  city                String?
-  state               String?
-  zipCode             String?
-  logoUrl             String?
-  planType            String    @default("basic") // basic, professional, enterprise
-  planStatus          String    @default("active") // active, suspended, cancelled
-  trialEndsAt         DateTime?
-  subscriptionEndsAt  DateTime?
-  isActive            Boolean   @default(true)
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  // Relacionamentos
-  users               User[]
-  settings            CompanySetting[]
-  products            Product[]
-  categories          Category[]
-  customers           Customer[]
-  sales               Sale[]
-  financialAccounts   FinancialAccount[]
+  id                    String                 @id @default(uuid())
+  name                  String
+  cnpj                  String?                @unique
+  email                 String                 @unique
+  phone                 String?
+  address               String?
+  city                  String?
+  state                 String?
+  zipCode               String?
+  logoUrl               String?
+  planType              String                 @default("basic")
+  planStatus            String                 @default("active")
+  trialEndsAt           DateTime?
+  subscriptionEndsAt    DateTime?
+  isActive              Boolean                @default(true)
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  printers              Printer[]
+  categories            Category[]
+  settings              CompanySetting[]
+  customers             Customer[]
+  financialAccounts     FinancialAccount[]
   financialTransactions FinancialTransaction[]
-  paymentMethods      PaymentMethod[]
-  paymentTerms        PaymentTerm[]
+  paymentMethods        PaymentMethod[]
+  paymentTerms          PaymentTerm[]
+  products              Product[]
+  sales                 Sale[]
+  users                 User[]
 
   @@map("companies")
 }
 
 model User {
-  id          String    @id @default(uuid())
-  companyId   String?
-  name        String
-  email       String    @unique
+  id           String    @id @default(uuid())
+  companyId    String?
+  name         String
+  email        String    @unique
   passwordHash String
-  role        String    // master, admin, manager, seller, stock, financial
-  permissions Json?
-  isActive    Boolean   @default(true)
-  lastLogin   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Relacionamentos
-  company     Company?  @relation(fields: [companyId], references: [id])
+  role         String
+  permissions  Json?
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  company      Company?  @relation(fields: [companyId], references: [id])
 
   @@map("users")
 }
 
 model CompanySetting {
-  id        String   @id @default(uuid())
-  companyId String
-  settingKey String
+  id           String   @id @default(uuid())
+  companyId    String
+  settingKey   String
   settingValue Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  // Relacionamentos
-  company   Company  @relation(fields: [companyId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  company      Company  @relation(fields: [companyId], references: [id])
 
   @@unique([companyId, settingKey])
   @@map("company_settings")
 }
 
-// ========================================
-// TABELAS POR EMPRESA (Schema: tenant_{id})
-// ========================================
-
 model Category {
-  id          String    @id @default(uuid())
-  companyId   String    // Relacionamento com empresa
+  id          String     @id @default(uuid())
+  companyId   String
   name        String
   description String?
   parentId    String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Relacionamentos
-  company     Company   @relation(fields: [companyId], references: [id])
-  parent      Category? @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  company     Company    @relation(fields: [companyId], references: [id])
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children    Category[] @relation("CategoryHierarchy")
   products    Product[]
 
@@ -116,183 +98,167 @@ model Supplier {
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
-
-  // Relacionamentos
   products      Product[]
 
   @@map("suppliers")
 }
 
 model Product {
-  id                String    @id @default(uuid())
-  companyId         String    // Relacionamento com empresa
-  sku               String?   // Removido @unique - agora pode ser duplicado entre empresas
-  name              String
-  description       String?
-  categoryId        String?
-  supplierId        String?
-  barcode           String?   // Removido @unique - agora pode ser duplicado entre empresas
-  costPrice         Decimal?  @db.Decimal(10, 2)
-  salePrice         Decimal   @db.Decimal(10, 2)
-  promotionalPrice  Decimal?  @db.Decimal(10, 2)
-  minStock          Int       @default(0)
-  maxStock          Int?
-  weight            Decimal?  @db.Decimal(8, 3)
-  dimensions        Json?     // {length, width, height}
-  images            Json?     // array de URLs
-  specifications    Json?     // especificações customizadas
-  isActive          Boolean   @default(true)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id               String             @id @default(uuid())
+  companyId        String
+  sku              String?
+  name             String
+  description      String?
+  categoryId       String?
+  supplierId       String?
+  barcode          String?
+  costPrice        Decimal?           @db.Decimal(10, 2)
+  salePrice        Decimal            @db.Decimal(10, 2)
+  promotionalPrice Decimal?           @db.Decimal(10, 2)
+  minStock         Int                @default(0)
+  maxStock         Int?
+  weight           Decimal?           @db.Decimal(8, 3)
+  dimensions       Json?
+  images           Json?
+  specifications   Json?
+  isActive         Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  variations       ProductVariation[]
+  category         Category?          @relation(fields: [categoryId], references: [id])
+  company          Company            @relation(fields: [companyId], references: [id])
+  supplier         Supplier?          @relation(fields: [supplierId], references: [id])
+  saleItems        SaleItem[]
+  stockMovements   StockMovement[]
 
-  // Relacionamentos
-  company           Company   @relation(fields: [companyId], references: [id])
-  category          Category? @relation(fields: [categoryId], references: [id])
-  supplier          Supplier? @relation(fields: [supplierId], references: [id])
-  variations        ProductVariation[]
-  stockMovements    StockMovement[]
-  saleItems         SaleItem[]
-
-  // Índices compostos para garantir unicidade por empresa
   @@unique([companyId, sku], name: "unique_sku_per_company")
   @@unique([companyId, barcode], name: "unique_barcode_per_company")
   @@map("products")
 }
 
 model ProductVariation {
-  id            String    @id @default(uuid())
-  productId     String
-  size          String?
-  color         String?
-  model         String?
-  sku           String?   // Removido @unique - agora pode ser duplicado entre empresas
-  barcode       String?   // Removido @unique - agora pode ser duplicado entre empresas
-  costPrice     Decimal?  @db.Decimal(10, 2)
-  salePrice     Decimal   @db.Decimal(10, 2)
-  stockQuantity Int       @default(0)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relacionamentos
-  product       Product   @relation(fields: [productId], references: [id])
+  id             String          @id @default(uuid())
+  productId      String
+  size           String?
+  color          String?
+  model          String?
+  sku            String?
+  barcode        String?
+  costPrice      Decimal?        @db.Decimal(10, 2)
+  salePrice      Decimal         @db.Decimal(10, 2)
+  stockQuantity  Int             @default(0)
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  product        Product         @relation(fields: [productId], references: [id])
+  saleItems      SaleItem[]
   stockMovements StockMovement[]
-  saleItems     SaleItem[]
 
-  // Índices compostos para garantir unicidade por empresa (através do produto)
   @@unique([productId, sku], name: "unique_variation_sku_per_product")
   @@unique([productId, barcode], name: "unique_variation_barcode_per_product")
   @@map("product_variations")
 }
 
 model StockMovement {
-  id                String    @id @default(uuid())
+  id                String            @id @default(uuid())
   productId         String
   variationId       String?
   movementType      MovementType
   quantity          Int
   previousQuantity  Int?
   newQuantity       Int?
-  unitCost          Decimal?  @db.Decimal(10, 2)
-  totalCost         Decimal?  @db.Decimal(10, 2)
+  unitCost          Decimal?          @db.Decimal(10, 2)
+  totalCost         Decimal?          @db.Decimal(10, 2)
   referenceDocument String?
   notes             String?
   userId            String
-  createdAt         DateTime  @default(now())
-
-  // Relacionamentos
-  product           Product   @relation(fields: [productId], references: [id])
+  createdAt         DateTime          @default(now())
+  product           Product           @relation(fields: [productId], references: [id])
   variation         ProductVariation? @relation(fields: [variationId], references: [id])
 
   @@map("stock_movements")
 }
 
 model Customer {
-  id          String    @id @default(uuid())
-  companyId   String
-  name        String
-  cpfCnpj     String?
-  email       String?
-  phone       String?
-  address     String?
-  city        String?
-  state       String?
-  zipCode     String?
-  birthDate   DateTime?
-  gender      String?
-  notes       String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id        String    @id @default(uuid())
+  companyId String
+  name      String
+  cpfCnpj   String?
+  email     String?
+  phone     String?
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  birthDate DateTime?
+  gender    String?
+  notes     String?
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  company   Company   @relation(fields: [companyId], references: [id])
+  sales     Sale[]
 
-  // Relacionamentos
-  company     Company   @relation(fields: [companyId], references: [id])
-  sales       Sale[]
-
-  // Índices compostos para garantir unicidade por empresa
   @@unique([companyId, cpfCnpj], name: "unique_customer_cpf_per_company")
   @@unique([companyId, email], name: "unique_customer_email_per_company")
   @@map("customers")
 }
 
 model Sale {
-  id            String        @id @default(uuid())
-  companyId     String
-  customerId    String?
-  saleNumber    String        @unique
-  totalAmount   Decimal       @db.Decimal(10, 2)
-  discount      Decimal?      @db.Decimal(10, 2)
+  id              String        @id @default(uuid())
+  companyId       String
+  customerId      String?
+  saleNumber      String        @unique
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  discount        Decimal?      @db.Decimal(10, 2)
   paymentMethodId String
-  paymentStatus PaymentStatus @default(PENDING)
-  saleStatus    SaleStatus    @default(COMPLETED)
-  dueDate       DateTime?
-  notes         String?
-  isActive      Boolean       @default(true)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  // Relacionamentos
-  company       Company       @relation(fields: [companyId], references: [id])
-  customer      Customer?     @relation(fields: [customerId], references: [id])
-  paymentMethod PaymentMethod @relation(fields: [paymentMethodId], references: [id])
-  items         SaleItem[]
+  paymentStatus   PaymentStatus @default(PENDING)
+  saleStatus      SaleStatus    @default(COMPLETED)
+  dueDate         DateTime?
+  notes           String?
+  isActive        Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  paymentTermId   String?
+  items           SaleItem[]
+  company         Company       @relation(fields: [companyId], references: [id])
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  paymentTerm     PaymentTerm?  @relation(fields: [paymentTermId], references: [id])
 
   @@map("sales")
 }
 
 model SaleItem {
-  id          String   @id @default(uuid())
+  id          String            @id @default(uuid())
   saleId      String
   productId   String
   variationId String?
   quantity    Int
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  totalPrice  Decimal  @db.Decimal(10, 2)
-  discount    Decimal? @db.Decimal(10, 2)
-  createdAt   DateTime @default(now())
-
-  // Relacionamentos
-  sale        Sale     @relation(fields: [saleId], references: [id])
-  product     Product  @relation(fields: [productId], references: [id])
+  unitPrice   Decimal           @db.Decimal(10, 2)
+  totalPrice  Decimal           @db.Decimal(10, 2)
+  discount    Decimal?          @db.Decimal(10, 2)
+  createdAt   DateTime          @default(now())
+  product     Product           @relation(fields: [productId], references: [id])
+  sale        Sale              @relation(fields: [saleId], references: [id])
   variation   ProductVariation? @relation(fields: [variationId], references: [id])
 
   @@map("sale_items")
 }
 
 model FinancialAccount {
-  id            String    @id @default(uuid())
-  companyId     String
-  name          String
-  accountType   AccountType
-  initialBalance Decimal   @db.Decimal(10, 2) @default(0)
-  currentBalance Decimal   @db.Decimal(10, 2) @default(0)
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  // Relacionamentos
-  company       Company   @relation(fields: [companyId], references: [id])
-  transactions  FinancialTransaction[]
+  id             String                 @id @default(uuid())
+  companyId      String
+  name           String
+  accountType    AccountType
+  initialBalance Decimal                @default(0) @db.Decimal(10, 2)
+  currentBalance Decimal                @default(0) @db.Decimal(10, 2)
+  isActive       Boolean                @default(true)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  company        Company                @relation(fields: [companyId], references: [id])
+  transactions   FinancialTransaction[]
+  paymentMethods PaymentMethod[]        // Métodos de pagamento vinculados
 
   @@map("financial_accounts")
 }
@@ -313,55 +279,76 @@ model FinancialTransaction {
   userId            String
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
-
-  // Relacionamentos
-  company           Company           @relation(fields: [companyId], references: [id])
+  
+  // Campos para despesas recorrentes
+  isRecurring       Boolean           @default(false)
+  recurrenceType    RecurrenceType?
+  recurrenceInterval Int?
+  recurrenceEndDate DateTime?
+  parentTransactionId String?
+  parentTransaction FinancialTransaction? @relation("RecurringTransactions", fields: [parentTransactionId], references: [id])
+  recurringTransactions FinancialTransaction[] @relation("RecurringTransactions")
+  
   account           FinancialAccount  @relation(fields: [accountId], references: [id])
+  company           Company           @relation(fields: [companyId], references: [id])
 
   @@map("financial_transactions")
 }
 
-// Configurações de vendas por empresa
 model PaymentMethod {
-  id          String   @id @default(uuid())
-  companyId   String
-  name        String   // Ex: "Dinheiro", "PIX", "Cartão de Crédito"
-  description String?
-  isActive    Boolean  @default(true)
-  fee         Decimal? @db.Decimal(5, 2) // Taxa em porcentagem
-  color       String?  // Cor para identificação no PDV
-  sortOrder   Int      @default(0) // Ordem de exibição
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relacionamentos
-  company     Company  @relation(fields: [companyId], references: [id])
-  sales       Sale[]
+  id                  String   @id @default(uuid())
+  companyId           String
+  name                String
+  description         String?
+  isActive            Boolean  @default(true)
+  fee                 Decimal? @db.Decimal(5, 2)
+  color               String?
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  isInstallmentMethod Boolean  @default(false)
+  accountId           String?  // Conta financeira vinculada
+  company             Company  @relation(fields: [companyId], references: [id])
+  account             FinancialAccount? @relation(fields: [accountId], references: [id])
+  sales               Sale[]
 
   @@map("payment_methods")
 }
 
 model PaymentTerm {
-  id          String   @id @default(uuid())
-  companyId   String
-  name        String   // Ex: "À vista", "30 dias", "60 dias"
-  days        Int      @default(0) // 0 = à vista
-  description String?
-  isActive    Boolean  @default(true)
-  interest    Decimal? @db.Decimal(5, 2) // Juros em porcentagem
-  sortOrder   Int      @default(0) // Ordem de exibição
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relacionamentos
-  company     Company  @relation(fields: [companyId], references: [id])
+  id                  String   @id @default(uuid())
+  companyId           String
+  name                String
+  days                Int      @default(0)
+  description         String?
+  isActive            Boolean  @default(true)
+  interest            Decimal? @db.Decimal(5, 2)
+  sortOrder           Int      @default(0)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  installmentInterval Int?
+  installmentsCount   Int?
+  isInstallment       Boolean  @default(false)
+  company             Company  @relation(fields: [companyId], references: [id])
+  sales               Sale[]
 
   @@map("payment_terms")
 }
 
-// ========================================
-// ENUMS
-// ========================================
+model Printer {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  companyId   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, name])
+  @@map("printers")
+}
 
 enum UserRole {
   MASTER
@@ -383,8 +370,6 @@ enum PlanStatus {
   SUSPENDED
   CANCELLED
 }
-
-// Enum PaymentMethod removido - usando modelo PaymentMethod em seu lugar
 
 enum PaymentStatus {
   PENDING
@@ -409,6 +394,15 @@ enum TransactionType {
   INCOME
   EXPENSE
   TRANSFER
+}
+
+enum RecurrenceType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  SEMIANNUAL
+  ANNUAL
 }
 
 enum TransactionStatus {

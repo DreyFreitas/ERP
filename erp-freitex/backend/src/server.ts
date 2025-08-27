@@ -18,6 +18,10 @@ import stockRoutes from './routes/stock';
 import customerRoutes from './routes/customers';
 import financialRoutes from './routes/financial';
 import settingsRoutes from './routes/settings';
+import paymentTermRoutes from './routes/paymentTerms';
+import salesRoutes from './routes/sales';
+
+
 
 // Carregar variáveis de ambiente
 dotenv.config();
@@ -37,13 +41,13 @@ app.use(cors({
 // Middleware de segurança
 app.use(helmet());
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100, // limite de 100 requests por IP
-  message: 'Muitas requisições deste IP, tente novamente mais tarde.'
-});
-app.use('/api/', limiter);
+// Rate limiting (temporariamente desabilitado para desenvolvimento)
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 minutos
+//   max: 100, // limite de 100 requests por IP
+//   message: 'Muitas requisições deste IP, tente novamente mais tarde.'
+// });
+// app.use('/api/', limiter);
 
 // Logging
 app.use(morgan('combined'));
@@ -73,6 +77,10 @@ app.use('/api/stock', stockRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/financial', financialRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/payment-terms', paymentTermRoutes);
+app.use('/api/sales', salesRoutes);
+
+
 
 // Servir arquivos estáticos (uploads) - DEPOIS das rotas da API
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));

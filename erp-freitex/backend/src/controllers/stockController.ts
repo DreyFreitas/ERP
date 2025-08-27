@@ -244,6 +244,110 @@ export class StockController {
     }
   }
 
+  // Registrar entrada de estoque em lote (múltiplas variações)
+  async registerBatchEntry(req: Request, res: Response): Promise<void> {
+    try {
+      const { productId, entries, referenceDocument, notes } = req.body;
+      const userId = (req as any).user.id;
+      const companyId = (req as any).user.companyId;
+
+      // Validar dados obrigatórios
+      if (!productId || !entries || !Array.isArray(entries) || entries.length === 0) {
+        res.status(400).json({
+          success: false,
+          message: 'Produto e entradas são obrigatórios'
+        });
+        return;
+      }
+
+      // Verificar se o produto existe e pertence à empresa
+      const product = await prisma.product.findFirst({
+        where: {
+          id: productId,
+          companyId: companyId
+        },
+        include: {
+          variations: true
+        }
+      });
+
+      if (!product) {
+        res.status(404).json({
+          success: false,
+          message: 'Produto não encontrado'
+        });
+        return;
+      }
+
+      const movements = [];
+
+      // Processar cada entrada
+      for (const entry of entries) {
+        const { variationId, quantity, unitCost } = entry;
+
+        if (!quantity || quantity <= 0) {
+          continue; // Pular entradas inválidas
+        }
+
+        // Verificar se a variação existe (se fornecida)
+        if (variationId) {
+          const variation = product.variations.find(v => v.id === variationId);
+          if (!variation) {
+            continue; // Pular variação inexistente
+          }
+        }
+
+        // Calcular custo total
+        const totalCost = unitCost ? unitCost * quantity : null;
+
+        // Registrar movimentação
+        const movement = await prisma.stockMovement.create({
+          data: {
+            productId,
+            variationId: variationId || null,
+            movementType: MovementType.ENTRY,
+            quantity,
+            unitCost,
+            totalCost,
+            referenceDocument,
+            notes,
+            userId
+          }
+        });
+
+        movements.push(movement);
+
+        // Atualizar estoque
+        if (variationId) {
+          await prisma.productVariation.update({
+            where: { id: variationId },
+            data: {
+              stockQuantity: {
+                increment: quantity
+              }
+            }
+          });
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Entradas de estoque registradas com sucesso',
+        data: {
+          movements,
+          totalEntries: movements.length
+        }
+      });
+
+    } catch (error) {
+      console.error('Erro ao registrar entradas em lote:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor'
+      });
+    }
+  }
+
   // Ajuste de estoque
   async adjustStock(req: Request, res: Response): Promise<void> {
     try {

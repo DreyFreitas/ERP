@@ -32,6 +32,8 @@ export const companyController = {
   // Listar todas as empresas
   async listCompanies(req: Request, res: Response<ApiResponse>) {
     try {
+      console.log('🔍 Iniciando busca de empresas com contagem de usuários...');
+      
       const companies = await prisma.company.findMany({
         select: {
           id: true,
@@ -44,20 +46,37 @@ export const companyController = {
           planStatus: true,
           isActive: true,
           createdAt: true,
-          updatedAt: true
+          updatedAt: true,
+          _count: {
+            select: {
+              users: true
+            }
+          }
         },
         orderBy: {
           createdAt: 'desc'
         }
       });
 
+      console.log('📊 Empresas encontradas:', companies.length);
+      console.log('📋 Dados das empresas:', JSON.stringify(companies, null, 2));
+
+      // Transformar os dados para incluir a contagem de usuários
+      const companiesWithUserCount = companies.map(company => ({
+        ...company,
+        userCount: company._count.users,
+        _count: undefined // Remover o objeto _count
+      }));
+
+      console.log('✅ Dados transformados:', JSON.stringify(companiesWithUserCount, null, 2));
+
       return res.json({
         success: true,
         message: 'Empresas listadas com sucesso',
-        data: companies
+        data: companiesWithUserCount
       });
     } catch (error) {
-      console.error('Erro ao listar empresas:', error);
+      console.error('❌ Erro ao listar empresas:', error);
       return res.status(500).json({
         success: false,
         message: 'Erro interno do servidor',
@@ -383,15 +402,106 @@ export const companyController = {
         });
       }
 
-      // Dados mockados para demonstração
-      // Em produção, esses dados viriam das tabelas específicas da empresa
+      // Calcular data de início do mês atual
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+      // Buscar dados reais do banco de dados
+      const [
+        totalSales,
+        salesToday,
+        totalProducts,
+        lowStockProducts,
+        totalCustomers,
+        monthlyRevenue,
+        pendingPayments
+      ] = await Promise.all([
+        // Total de vendas (todas)
+        prisma.sale.count({
+          where: {
+            companyId: user.companyId,
+            isActive: true
+          }
+        }),
+        
+        // Vendas de hoje
+        prisma.sale.count({
+          where: {
+            companyId: user.companyId,
+            isActive: true,
+            createdAt: {
+              gte: startOfDay
+            }
+          }
+        }),
+        
+        // Total de produtos
+        prisma.product.count({
+          where: {
+            companyId: user.companyId,
+            isActive: true
+          }
+        }),
+        
+        // Produtos com estoque baixo (menos de 10 unidades)
+        prisma.product.count({
+          where: {
+            companyId: user.companyId,
+            isActive: true,
+            variations: {
+              some: {
+                stockQuantity: {
+                  lt: 10
+                }
+              }
+            }
+          }
+        }),
+        
+        // Total de clientes
+        prisma.customer.count({
+          where: {
+            companyId: user.companyId,
+            isActive: true
+          }
+        }),
+        
+        // Receita mensal
+        prisma.sale.aggregate({
+          where: {
+            companyId: user.companyId,
+            isActive: true,
+            createdAt: {
+              gte: startOfMonth
+            },
+            paymentStatus: 'PAID'
+          },
+          _sum: {
+            totalAmount: true
+          }
+        }),
+        
+        // Contas pendentes (vendas com pagamento pendente)
+        prisma.sale.aggregate({
+          where: {
+            companyId: user.companyId,
+            isActive: true,
+            paymentStatus: 'PENDING'
+          },
+          _sum: {
+            totalAmount: true
+          }
+        })
+      ]);
+
       const dashboardData = {
-        totalSales: 156,
-        totalProducts: 342,
-        lowStockProducts: 8,
-        totalCustomers: 89,
-        monthlyRevenue: 45250.00,
-        pendingPayments: 12500.00,
+        totalSales: salesToday, // Mostrar vendas de hoje no card principal
+        totalProducts,
+        lowStockProducts,
+        totalCustomers,
+        monthlyRevenue: monthlyRevenue._sum.totalAmount || 0,
+        pendingPayments: pendingPayments._sum.totalAmount || 0,
         company: {
           id: user.company.id,
           name: user.company.name,

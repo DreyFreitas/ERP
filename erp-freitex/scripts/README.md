@@ -1,105 +1,143 @@
-# Scripts de Gerenciamento do Banco de Dados - ERP Freitex
+# Scripts de Automação - ERP Freitex Softwares
 
-Este diretório contém scripts para gerenciar o banco de dados de forma segura.
+Este diretório contém scripts para automatizar tarefas comuns do ambiente de desenvolvimento.
 
 ## 📋 Scripts Disponíveis
 
-### 1. `backup-database.sh`
-**Função:** Fazer backup completo do banco de dados PostgreSQL
+### 🚀 `start-with-migrations.ps1` (Windows)
+Script completo para iniciar o ambiente Docker e aplicar migrações automaticamente.
 
 **Uso:**
-```bash
-./backup-database.sh [nome_do_backup]
-```
-
-**Exemplo:**
-```bash
-./backup-database.sh backup_diario
-```
-
-### 2. `restore-database.sh`
-**Função:** Restaurar banco de dados a partir de um backup
-
-**Uso:**
-```bash
-./restore-database.sh [arquivo_backup]
-```
-
-**Exemplo:**
-```bash
-./restore-database.sh ./backups/backup_diario.sql
-```
-
-### 3. `safe-migration.sh`
-**Função:** Executar migrações do Prisma de forma segura (com backup automático)
-
-**Uso:**
-```bash
-./safe-migration.sh
-```
-
-## 🛡️ Proteções Implementadas
-
-### Backup Automático
-- ✅ Backup automático antes de qualquer migração
-- ✅ Verificação de integridade dos dados
-- ✅ Restore automático em caso de erro
-
-### Verificações de Segurança
-- ✅ Confirmação do usuário antes de operações críticas
-- ✅ Verificação de existência de arquivos
-- ✅ Validação de integridade dos dados
-
-## 📁 Estrutura de Backups
-
-```
-scripts/
-├── backups/                    # Diretório de backups
-│   ├── backup_20240816_120000.sql
-│   ├── pre_migration_20240816_120500.sql
-│   └── ...
-├── backup-database.sh          # Script de backup
-├── restore-database.sh         # Script de restore
-├── safe-migration.sh           # Script de migração segura
-└── README.md                   # Esta documentação
-```
-
-## 🚨 Regras Importantes
-
-1. **SEMPRE use `safe-migration.sh`** para migrações do Prisma
-2. **NUNCA execute migrações** sem backup prévio
-3. **Mantenha backups regulares** do banco de dados
-4. **Teste restores** em ambiente de desenvolvimento
-
-## 🔧 Como Usar
-
-### Windows (PowerShell)
 ```powershell
-cd scripts
-.\backup-database.ps1 meu_backup
-.\safe-migration.ps1
-.\restore-database.ps1 .\backups\meu_backup.sql
+.\scripts\start-with-migrations.ps1
 ```
 
-### Linux/Mac (Bash)
+**O que faz:**
+- ✅ Verifica se o Docker está rodando
+- ✅ Inicia todos os containers com `docker-compose up -d`
+- ✅ Aplica migrações do Prisma automaticamente
+- ✅ Gera o cliente Prisma
+- ✅ Verifica se os serviços estão funcionando
+- ✅ Exibe URLs de acesso
+
+### 🔄 `apply-migrations.ps1` (Windows)
+Script para aplicar migrações do Prisma quando o ambiente já está rodando.
+
+**Uso:**
+```powershell
+.\scripts\apply-migrations.ps1
+```
+
+**O que faz:**
+- ✅ Verifica se o container do backend está rodando
+- ✅ Aplica migrações pendentes
+- ✅ Regenera o cliente Prisma
+- ✅ Reinicia o backend
+- ✅ Verifica se está funcionando
+
+### 🔄 `apply-migrations.sh` (Linux/Mac)
+Versão bash do script de migrações para sistemas Unix.
+
+**Uso:**
 ```bash
-cd scripts
-chmod +x backup-database.sh
-./backup-database.sh meu_backup
-./safe-migration.sh
-./restore-database.sh ./backups/meu_backup.sql
+chmod +x scripts/apply-migrations.sh
+./scripts/apply-migrations.sh
 ```
 
-## 📊 Monitoramento
+## 🎯 Quando Usar
 
-Os scripts incluem verificações automáticas:
-- Contagem de registros nas tabelas principais
-- Verificação de integridade após operações
-- Logs detalhados de todas as operações
+### Primeira vez ou após mudanças no schema:
+```powershell
+.\scripts\start-with-migrations.ps1
+```
 
-## ⚠️ Avisos Importantes
+### Apenas aplicar migrações (ambiente já rodando):
+```powershell
+.\scripts\apply-migrations.ps1
+```
 
-- **Backups são essenciais** antes de qualquer mudança no banco
-- **Teste sempre** em ambiente de desenvolvimento primeiro
-- **Mantenha múltiplos backups** em locais diferentes
-- **Documente todas as operações** realizadas no banco
+### Após alterações no schema.prisma:
+```powershell
+.\scripts\apply-migrations.ps1
+```
+
+## 🔧 Comandos Manuais
+
+Se preferir executar manualmente:
+
+```powershell
+# Aplicar migrações
+docker exec docker-backend-1 npx prisma migrate deploy
+
+# Gerar cliente Prisma
+docker exec docker-backend-1 npx prisma generate
+
+# Reiniciar backend
+docker restart docker-backend-1
+```
+
+## 🚨 Solução de Problemas
+
+### Erro: "Container não está rodando"
+```powershell
+# Inicie o ambiente primeiro
+cd docker
+docker-compose up -d
+```
+
+### Erro: "Tabela não existe"
+```powershell
+# Execute o script de migrações
+.\scripts\apply-migrations.ps1
+```
+
+### Erro: "Docker não está rodando"
+- Inicie o Docker Desktop
+- Aguarde a inicialização completa
+- Execute o script novamente
+
+## 📝 Logs e Debug
+
+Para ver logs em tempo real:
+```powershell
+cd docker
+docker-compose logs -f
+```
+
+Para ver logs de um serviço específico:
+```powershell
+docker logs docker-backend-1 -f
+```
+
+## 🔄 Fluxo de Desenvolvimento Recomendado
+
+1. **Iniciar ambiente:**
+   ```powershell
+   .\scripts\start-with-migrations.ps1
+   ```
+
+2. **Fazer alterações no schema.prisma**
+
+3. **Criar nova migração:**
+   ```powershell
+   docker exec docker-backend-1 npx prisma migrate dev --name nome_da_migracao
+   ```
+
+4. **Aplicar migrações:**
+   ```powershell
+   .\scripts\apply-migrations.ps1
+   ```
+
+5. **Desenvolver e testar**
+
+## 🎉 Benefícios
+
+- ✅ **Automatização completa** - Não precisa lembrar comandos
+- ✅ **Verificação de erros** - Scripts param se algo der errado
+- ✅ **Feedback visual** - Cores e emojis para facilitar leitura
+- ✅ **Cross-platform** - Scripts para Windows e Unix
+- ✅ **Prevenção de erros** - Evita problemas de migrações não aplicadas
+
+---
+
+**💡 Dica:** Sempre execute os scripts após fazer alterações no schema do Prisma para evitar erros de tabelas não existentes!

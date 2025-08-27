@@ -301,6 +301,10 @@ export class FinancialController {
         category,
         referenceDocument,
         notes,
+        isRecurring,
+        recurrenceType,
+        recurrenceInterval,
+        recurrenceEndDate,
       } = req.body;
 
       if (!accountId || !transactionType || !description || !amount) {
@@ -339,6 +343,10 @@ export class FinancialController {
           referenceDocument,
           notes,
           userId,
+          isRecurring: isRecurring || false,
+          recurrenceType: recurrenceType || null,
+          recurrenceInterval: recurrenceInterval ? Number(recurrenceInterval) : null,
+          recurrenceEndDate: recurrenceEndDate ? new Date(recurrenceEndDate) : null,
         },
       });
 
@@ -544,6 +552,103 @@ export class FinancialController {
       console.error('Erro ao obter estatísticas:', error);
       return res.status(500).json({ error: 'Erro interno do servidor' });
     }
+  }
+
+  // ========================================
+  // TRANSAÇÕES RECORRENTES
+  // ========================================
+
+  // Gerar transações recorrentes
+  async generateRecurringTransactions(req: Request, res: Response) {
+    try {
+      const { companyId } = (req as any).user;
+      const { date } = req.query;
+
+      const targetDate = date ? new Date(date as string) : new Date();
+      const generatedTransactions = [];
+
+      // Buscar transações recorrentes ativas
+      const recurringTransactions = await prisma.financialTransaction.findMany({
+        where: {
+          companyId,
+          isRecurring: true,
+          transactionType: 'EXPENSE',
+          status: 'PENDING',
+          OR: [
+            { recurrenceEndDate: null },
+            { recurrenceEndDate: { gte: targetDate } }
+          ]
+        }
+      });
+
+      for (const transaction of recurringTransactions) {
+        const nextDueDate = this.calculateNextDueDate(
+          transaction.dueDate || transaction.createdAt,
+          transaction.recurrenceType!,
+          transaction.recurrenceInterval || 1
+        );
+
+        // Se a próxima data de vencimento é hoje ou passou, gerar nova transação
+        if (nextDueDate <= targetDate) {
+          const newTransaction = await prisma.financialTransaction.create({
+            data: {
+              companyId,
+              accountId: transaction.accountId,
+              transactionType: 'EXPENSE',
+              description: transaction.description,
+              amount: transaction.amount,
+              dueDate: nextDueDate,
+              category: transaction.category,
+              referenceDocument: transaction.referenceDocument,
+              notes: transaction.notes,
+              userId: transaction.userId,
+              isRecurring: false, // Nova transação não é recorrente
+              parentTransactionId: transaction.id, // Referência à transação pai
+            }
+          });
+
+          generatedTransactions.push(newTransaction);
+        }
+      }
+
+      return res.json({
+        message: `${generatedTransactions.length} transações recorrentes geradas`,
+        transactions: generatedTransactions
+      });
+    } catch (error) {
+      console.error('Erro ao gerar transações recorrentes:', error);
+      return res.status(500).json({ error: 'Erro interno do servidor' });
+    }
+  }
+
+  // Calcular próxima data de vencimento
+  private calculateNextDueDate(currentDate: Date, recurrenceType: string, interval: number): Date {
+    const date = new Date(currentDate);
+    
+    switch (recurrenceType) {
+      case 'DAILY':
+        date.setDate(date.getDate() + interval);
+        break;
+      case 'WEEKLY':
+        date.setDate(date.getDate() + (interval * 7));
+        break;
+      case 'MONTHLY':
+        date.setMonth(date.getMonth() + interval);
+        break;
+      case 'QUARTERLY':
+        date.setMonth(date.getMonth() + (interval * 3));
+        break;
+      case 'SEMIANNUAL':
+        date.setMonth(date.getMonth() + (interval * 6));
+        break;
+      case 'ANNUAL':
+        date.setFullYear(date.getFullYear() + interval);
+        break;
+      default:
+        date.setMonth(date.getMonth() + interval);
+    }
+    
+    return date;
   }
 }
 

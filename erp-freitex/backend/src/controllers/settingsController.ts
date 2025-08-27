@@ -14,6 +14,15 @@ export class SettingsController {
 
       const paymentMethods = await prisma.paymentMethod.findMany({
         where: { companyId },
+        include: {
+          account: {
+            select: {
+              id: true,
+              name: true,
+              accountType: true
+            }
+          }
+        },
         orderBy: { sortOrder: 'asc' }
       });
 
@@ -36,7 +45,7 @@ export class SettingsController {
   async createPaymentMethod(req: Request, res: Response<ApiResponse>) {
     try {
       const { companyId } = (req as any).user;
-      const { name, description, fee, color, sortOrder } = req.body;
+      const { name, description, fee, color, sortOrder, isInstallmentMethod, accountId } = req.body;
 
       if (!name) {
         return res.status(400).json({
@@ -53,7 +62,9 @@ export class SettingsController {
           description,
           fee: fee ? Number(fee) : null,
           color,
-          sortOrder: sortOrder || 0
+          sortOrder: sortOrder || 0,
+          isInstallmentMethod: isInstallmentMethod || false,
+          accountId: accountId || null
         }
       });
 
@@ -77,7 +88,7 @@ export class SettingsController {
     try {
       const { companyId } = (req as any).user;
       const { id } = req.params;
-      const { name, description, fee, color, sortOrder, isActive } = req.body;
+      const { name, description, fee, color, sortOrder, isActive, isInstallmentMethod, accountId } = req.body;
 
       const paymentMethod = await prisma.paymentMethod.findFirst({
         where: { id, companyId }
@@ -99,7 +110,9 @@ export class SettingsController {
           fee: fee ? Number(fee) : null,
           color,
           sortOrder: sortOrder || 0,
-          isActive
+          isActive,
+          isInstallmentMethod: isInstallmentMethod || false,
+          accountId: accountId || null
         }
       });
 
@@ -188,7 +201,28 @@ export class SettingsController {
   async createPaymentTerm(req: Request, res: Response<ApiResponse>) {
     try {
       const { companyId } = (req as any).user;
-      const { name, days, description, interest, sortOrder } = req.body;
+      const { 
+        name, 
+        days, 
+        description, 
+        interest, 
+        sortOrder,
+        isInstallment = false,
+        installmentsCount,
+        installmentInterval
+      } = req.body;
+
+      // Debug: Log dos dados recebidos
+      console.log('Dados recebidos para criar prazo de pagamento (settings):', {
+        name,
+        days,
+        description,
+        interest,
+        sortOrder,
+        isInstallment,
+        installmentsCount,
+        installmentInterval
+      });
 
       if (!name) {
         return res.status(400).json({
@@ -205,7 +239,10 @@ export class SettingsController {
           days: days || 0,
           description,
           interest: interest ? Number(interest) : null,
-          sortOrder: sortOrder || 0
+          sortOrder: sortOrder || 0,
+          isInstallment,
+          installmentsCount,
+          installmentInterval
         }
       });
 
@@ -229,7 +266,30 @@ export class SettingsController {
     try {
       const { companyId } = (req as any).user;
       const { id } = req.params;
-      const { name, days, description, interest, sortOrder, isActive } = req.body;
+      const { 
+        name, 
+        days, 
+        description, 
+        interest, 
+        sortOrder, 
+        isActive,
+        isInstallment,
+        installmentsCount,
+        installmentInterval
+      } = req.body;
+
+      // Debug: Log dos dados recebidos para atualização
+      console.log('Dados recebidos para atualizar prazo de pagamento (settings):', {
+        name,
+        days,
+        description,
+        interest,
+        sortOrder,
+        isActive,
+        isInstallment,
+        installmentsCount,
+        installmentInterval
+      });
 
       const paymentTerm = await prisma.paymentTerm.findFirst({
         where: { id, companyId }
@@ -251,7 +311,10 @@ export class SettingsController {
           description,
           interest: interest ? Number(interest) : null,
           sortOrder: sortOrder || 0,
-          isActive
+          isActive,
+          isInstallment,
+          installmentsCount,
+          installmentInterval
         }
       });
 

@@ -253,9 +253,9 @@ export const productController = {
               size: variation.size,
               color: variation.color,
               model: variation.model,
-              sku: variation.sku,
+              sku: variation.sku?.trim() || null, // Permitir SKU nulo
               salePrice: variation.salePrice,
-              stockQuantity: variation.stockQuantity,
+              stockQuantity: variation.stockQuantity || 0,
               isActive: true
             }))
           } : undefined

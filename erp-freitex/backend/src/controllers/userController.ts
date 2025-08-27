@@ -458,5 +458,63 @@ export const userController = {
         data: null
       });
     }
+  },
+
+  // Estatísticas de usuários
+  async getUserStats(req: Request, res: Response<ApiResponse>) {
+    try {
+      const [
+        totalUsers,
+        activeUsers,
+        masterUsers,
+        adminUsers,
+        managerUsers,
+        sellerUsers,
+        stockUsers,
+        financialUsers,
+        usersThisMonth
+      ] = await Promise.all([
+        prisma.user.count(),
+        prisma.user.count({ where: { isActive: true } }),
+        prisma.user.count({ where: { role: 'master' } }),
+        prisma.user.count({ where: { role: 'admin' } }),
+        prisma.user.count({ where: { role: 'manager' } }),
+        prisma.user.count({ where: { role: 'seller' } }),
+        prisma.user.count({ where: { role: 'stock' } }),
+        prisma.user.count({ where: { role: 'financial' } }),
+        prisma.user.count({
+          where: {
+            createdAt: {
+              gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+            }
+          }
+        })
+      ]);
+
+      const stats = {
+        totalUsers,
+        activeUsers,
+        masterUsers,
+        adminUsers,
+        managerUsers,
+        sellerUsers,
+        stockUsers,
+        financialUsers,
+        usersThisMonth
+      };
+
+      return res.json({
+        success: true,
+        message: 'Estatísticas de usuários carregadas com sucesso',
+        data: stats
+      });
+    } catch (error) {
+      console.error('Erro ao carregar estatísticas de usuários:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        data: null
+      });
+    }
   }
 };
