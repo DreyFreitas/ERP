@@ -662,7 +662,7 @@ export class FinancialController {
       const { search, status, customerId } = req.query;
 
       const today = new Date();
-      const accountsReceivable = [];
+      const accountsReceivable: any[] = [];
 
       // 1. Buscar parcelas (vendas parceladas)
       const installmentsWhere: any = {
@@ -753,6 +753,7 @@ export class FinancialController {
           pendingAmount: installment.status === 'PAID' ? 0 : installment.amount,
           daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
           status: status,
+          isOverdue: daysOverdue > 0,
           installmentNumber: installment.installmentNumber,
           saleId: installment.saleId,
           type: 'installment'
@@ -766,6 +767,10 @@ export class FinancialController {
         paymentStatus: 'PENDING',
         dueDate: {
           not: null
+        },
+        // Apenas vendas que NÃO são parceladas
+        paymentTerm: {
+          isInstallment: false
         }
       };
 
@@ -822,7 +827,7 @@ export class FinancialController {
         
         let status = sale.paymentStatus;
         if (sale.paymentStatus === 'PENDING' && daysOverdue > 0) {
-          status = 'OVERDUE';
+          status = 'PENDING'; // Manter como PENDING, mas vamos usar um campo separado para indicar atraso
         }
 
         accountsReceivable.push({
@@ -835,6 +840,7 @@ export class FinancialController {
           pendingAmount: sale.paymentStatus === 'PAID' ? 0 : sale.finalAmount,
           daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
           status: status,
+          isOverdue: daysOverdue > 0,
           installmentNumber: null,
           saleId: sale.id,
           type: 'direct'
