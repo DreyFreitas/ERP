@@ -236,32 +236,51 @@ model Customer {
 }
 
 model Sale {
-  id              String        @id @default(uuid())
-  companyId       String
-  customerId      String?
-  saleNumber      String        @unique
-  totalAmount     Decimal       @db.Decimal(10, 2)
-  discount        Decimal?      @db.Decimal(10, 2)
-  discountType    String?       // 'percentage' ou 'fixed'
-  paymentMethodId String
-  paymentStatus   PaymentStatus @default(PENDING)
-  saleStatus      SaleStatus    @default(COMPLETED)
-  dueDate         DateTime?
-  notes           String?
-  isActive        Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  paymentTermId   String?
-  // Campos para taxas de pagamento
-  totalFees       Decimal?      @db.Decimal(10, 2)  // Total de taxas aplicadas
-  finalAmount     Decimal?      @db.Decimal(10, 2)  // Valor final com taxas
-  items           SaleItem[]
-  company         Company       @relation(fields: [companyId], references: [id])
-  customer        Customer?     @relation(fields: [customerId], references: [id])
-  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
-  paymentTerm     PaymentTerm?  @relation(fields: [paymentTermId], references: [id])
+  id                String            @id @default(uuid())
+  companyId         String
+  customerId        String?
+  saleNumber        String            @unique
+  totalAmount       Decimal           @db.Decimal(10, 2)
+  discount          Decimal?          @db.Decimal(10, 2)
+  discountType      String?
+  totalFees         Decimal?          @db.Decimal(10, 2)
+  finalAmount       Decimal           @db.Decimal(10, 2)
+  paymentMethodId   String
+  paymentTermId     String?
+  paymentStatus     PaymentStatus     @default(PENDING)
+  saleStatus        SaleStatus        @default(COMPLETED)
+  dueDate           DateTime?
+  notes             String?
+  isActive          Boolean           @default(true)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  company           Company           @relation(fields: [companyId], references: [id])
+  customer          Customer?         @relation(fields: [customerId], references: [id])
+  paymentMethod     PaymentMethod     @relation(fields: [paymentMethodId], references: [id])
+  paymentTerm       PaymentTerm?      @relation(fields: [paymentTermId], references: [id])
+  items             SaleItem[]
+  installments      SaleInstallment[] // Nova relação
 
   @@map("sales")
+}
+
+// Nova tabela para armazenar parcelas individualmente
+model SaleInstallment {
+  id                String            @id @default(uuid())
+  saleId            String
+  installmentNumber Int               // Número da parcela (1, 2, 3, etc.)
+  amount            Decimal           @db.Decimal(10, 2)
+  dueDate           DateTime
+  paymentDate       DateTime?
+  status            InstallmentStatus @default(PENDING)
+  notes             String?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  
+  sale              Sale              @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@map("sale_installments")
 }
 
 model SaleItem {
@@ -443,6 +462,13 @@ enum RecurrenceType {
 enum TransactionStatus {
   PENDING
   PAID
+  CANCELLED
+}
+
+enum InstallmentStatus {
+  PENDING
+  PAID
+  OVERDUE
   CANCELLED
 }
 

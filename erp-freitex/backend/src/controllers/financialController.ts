@@ -650,6 +650,294 @@ export class FinancialController {
     
     return date;
   }
+
+  // ========================================
+  // CONTAS A RECEBER
+  // ========================================
+
+  // Listar contas a receber baseadas nas parcelas E vendas a prazo direto
+  async listAccountsReceivable(req: Request, res: Response) {
+    try {
+      const { companyId } = (req as any).user;
+      const { search, status, customerId } = req.query;
+
+      const today = new Date();
+      const accountsReceivable = [];
+
+      // 1. Buscar parcelas (vendas parceladas)
+      const installmentsWhere: any = {
+        sale: {
+          companyId: companyId,
+          isActive: true
+        },
+        status: {
+          in: ['PENDING', 'OVERDUE']
+        }
+      };
+
+      if (search) {
+        installmentsWhere.OR = [
+          {
+            sale: {
+              customer: {
+                name: {
+                  contains: search as string,
+                  mode: 'insensitive',
+                }
+              }
+            }
+          },
+          {
+            sale: {
+              saleNumber: {
+                contains: search as string,
+                mode: 'insensitive',
+              }
+            }
+          }
+        ];
+      }
+
+      if (status === 'overdue') {
+        installmentsWhere.dueDate = {
+          lt: today
+        };
+        installmentsWhere.status = 'PENDING';
+      }
+
+      if (customerId) {
+        installmentsWhere.sale = {
+          ...installmentsWhere.sale,
+          customerId: customerId as string
+        };
+      }
+
+      const installments = await prisma.saleInstallment.findMany({
+        where: installmentsWhere,
+        include: {
+          sale: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          dueDate: 'asc'
+        }
+      });
+
+      // Processar parcelas
+      installments.forEach(installment => {
+        const dueDate = new Date(installment.dueDate);
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        let status = installment.status;
+        if (installment.status === 'PENDING' && daysOverdue > 0) {
+          status = 'OVERDUE';
+        }
+
+        accountsReceivable.push({
+          id: `installment_${installment.id}`,
+          customer: installment.sale.customer,
+          saleNumber: installment.sale.saleNumber,
+          saleDate: installment.sale.createdAt,
+          dueDate: installment.dueDate,
+          originalAmount: installment.amount,
+          pendingAmount: installment.status === 'PAID' ? 0 : installment.amount,
+          daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
+          status: status,
+          installmentNumber: installment.installmentNumber,
+          saleId: installment.saleId,
+          type: 'installment'
+        });
+      });
+
+      // 2. Buscar vendas a prazo direto (não parceladas)
+      const directSalesWhere: any = {
+        companyId: companyId,
+        isActive: true,
+        paymentStatus: 'PENDING',
+        dueDate: {
+          not: null
+        }
+      };
+
+      if (search) {
+        directSalesWhere.OR = [
+          {
+            customer: {
+              name: {
+                contains: search as string,
+                mode: 'insensitive',
+              }
+            }
+          },
+          {
+            saleNumber: {
+              contains: search as string,
+              mode: 'insensitive',
+            }
+          }
+        ];
+      }
+
+      if (status === 'overdue') {
+        directSalesWhere.dueDate = {
+          lt: today
+        };
+      }
+
+      if (customerId) {
+        directSalesWhere.customerId = customerId as string;
+      }
+
+      const directSales = await prisma.sale.findMany({
+        where: directSalesWhere,
+        include: {
+          customer: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true
+            }
+          }
+        },
+        orderBy: {
+          dueDate: 'asc'
+        }
+      });
+
+      // Processar vendas a prazo direto
+      directSales.forEach(sale => {
+        const dueDate = new Date(sale.dueDate!);
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        
+        let status = sale.paymentStatus;
+        if (sale.paymentStatus === 'PENDING' && daysOverdue > 0) {
+          status = 'OVERDUE';
+        }
+
+        accountsReceivable.push({
+          id: `sale_${sale.id}`,
+          customer: sale.customer,
+          saleNumber: sale.saleNumber,
+          saleDate: sale.createdAt,
+          dueDate: sale.dueDate,
+          originalAmount: sale.finalAmount,
+          pendingAmount: sale.paymentStatus === 'PAID' ? 0 : sale.finalAmount,
+          daysOverdue: daysOverdue > 0 ? daysOverdue : 0,
+          status: status,
+          installmentNumber: null,
+          saleId: sale.id,
+          type: 'direct'
+        });
+      });
+
+      // Ordenar por data de vencimento
+      accountsReceivable.sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+      return res.json({
+        success: true,
+        data: accountsReceivable
+      });
+    } catch (error) {
+      console.error('Erro ao listar contas a receber:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Erro interno do servidor' 
+      });
+    }
+  }
+
+  // Listar vencimentos próximos (próximos 30 dias)
+  async listUpcomingDueDates(req: Request, res: Response) {
+    try {
+      const { companyId } = (req as any).user;
+      const { days = 30 } = req.query;
+
+      const daysAhead = parseInt(days as string);
+      const today = new Date();
+      const futureDate = new Date();
+      futureDate.setDate(today.getDate() + daysAhead);
+
+      const installments = await prisma.saleInstallment.findMany({
+        where: {
+          sale: {
+            companyId: companyId,
+            isActive: true
+          },
+          status: 'PENDING',
+          dueDate: {
+            gte: today,
+            lte: futureDate
+          }
+        },
+        include: {
+          sale: {
+            include: {
+              customer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true
+                }
+              }
+            }
+          }
+        },
+        orderBy: {
+          dueDate: 'asc'
+        }
+      });
+
+      // Calcular dias restantes
+      const upcomingDueDates = installments.map(installment => {
+        const dueDate = new Date(installment.dueDate);
+        const daysRemaining = Math.ceil((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        
+        let status = 'PENDING';
+        if (daysRemaining <= 7) {
+          status = 'URGENT';
+        } else if (daysRemaining <= 15) {
+          status = 'WARNING';
+        }
+
+        return {
+          id: installment.id,
+          customer: installment.sale.customer,
+          saleNumber: installment.sale.saleNumber,
+          dueDate: installment.dueDate,
+          amount: installment.amount,
+          daysRemaining: daysRemaining,
+          status: status,
+          installmentNumber: installment.installmentNumber,
+          saleId: installment.saleId
+        };
+      });
+
+      return res.json({
+        success: true,
+        data: upcomingDueDates
+      });
+    } catch (error) {
+      console.error('Erro ao listar vencimentos próximos:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: 'Erro interno do servidor' 
+      });
+    }
+  }
+
+  // ========================================
 }
 
 export const financialController = new FinancialController();

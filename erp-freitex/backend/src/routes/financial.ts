@@ -53,6 +53,16 @@ router.delete('/transactions/:id', financialController.deleteTransaction);
 router.get('/stats', financialController.getFinancialStats);
 
 // ========================================
+// ROTAS DE CONTAS A RECEBER
+// ========================================
+
+// Listar contas a receber
+router.get('/accounts-receivable', financialController.listAccountsReceivable);
+
+// Listar vencimentos próximos
+router.get('/upcoming-due-dates', financialController.listUpcomingDueDates);
+
+// ========================================
 // ROTAS DE TRANSAÇÕES RECORRENTES
 // ========================================
 

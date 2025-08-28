@@ -98,6 +98,15 @@ export const saleController = {
                 color: true
               }
             },
+            paymentTerm: {
+              select: {
+                id: true,
+                name: true,
+                days: true,
+                isInstallment: true,
+                installmentsCount: true
+              }
+            },
             items: {
               include: {
                 product: {
@@ -116,6 +125,11 @@ export const saleController = {
                     model: true
                   }
                 }
+              }
+            },
+            installments: {
+              orderBy: {
+                installmentNumber: 'asc'
               }
             }
           },
@@ -683,32 +697,53 @@ export const saleController = {
         console.log('installments.length:', installments.length);
         console.log('installments:', installments);
         
-        // Criar transações financeiras
-        if (installments.length > 0) {
-          console.log('✅ Criando transações para parcelas...');
-          // Criar uma transação para cada parcela
-          for (let i = 0; i < installments.length; i++) {
-            const installment = installments[i];
-            console.log(`Criando parcela ${i + 1}:`, installment);
-            await prisma.financialTransaction.create({
-              data: {
-                companyId: user.companyId,
-                accountId: targetAccount.id,
-                transactionType: 'INCOME',
-                description: `Venda ${saleNumber} - Parcela ${i + 1}/${installments.length} - ${saleData.customerId ? 'Com cliente' : 'Sem cliente'}`,
-                amount: installment.amount,
-                paymentDate: null, // Pendente
-                dueDate: installment.dueDate,
-                status: 'PENDING',
-                category: 'Vendas',
-                referenceDocument: `${saleNumber}-P${i + 1}`,
-                notes: `Parcela ${i + 1}/${installments.length} da venda ${saleNumber} - Método: ${paymentMethod.name}`,
-                userId
-              }
-            });
-            console.log(`✅ Parcela ${i + 1} criada com sucesso`);
-          }
-        } else {
+              // Criar parcelas se for venda parcelada
+      if (installments.length > 0) {
+        console.log('✅ Criando parcelas da venda...');
+        // Criar uma parcela para cada installment
+        for (let i = 0; i < installments.length; i++) {
+          const installment = installments[i];
+          console.log(`Criando parcela ${i + 1}:`, installment);
+          await prisma.saleInstallment.create({
+            data: {
+              saleId: sale.id,
+              installmentNumber: i + 1,
+              amount: installment.amount,
+              dueDate: installment.dueDate,
+              status: 'PENDING',
+              notes: `Parcela ${i + 1}/${installments.length} da venda ${saleNumber}`
+            }
+          });
+          console.log(`✅ Parcela ${i + 1} criada com sucesso`);
+        }
+      }
+
+      // Criar transações financeiras
+      if (installments.length > 0) {
+        console.log('✅ Criando transações para parcelas...');
+        // Criar uma transação para cada parcela
+        for (let i = 0; i < installments.length; i++) {
+          const installment = installments[i];
+          console.log(`Criando transação para parcela ${i + 1}:`, installment);
+          await prisma.financialTransaction.create({
+            data: {
+              companyId: user.companyId,
+              accountId: targetAccount.id,
+              transactionType: 'INCOME',
+              description: `Venda ${saleNumber} - Parcela ${i + 1}/${installments.length} - ${saleData.customerId ? 'Com cliente' : 'Sem cliente'}`,
+              amount: installment.amount,
+              paymentDate: null, // Pendente
+              dueDate: installment.dueDate,
+              status: 'PENDING',
+              category: 'Vendas',
+              referenceDocument: `${saleNumber}-P${i + 1}`,
+              notes: `Parcela ${i + 1}/${installments.length} da venda ${saleNumber} - Método: ${paymentMethod.name}`,
+              userId
+            }
+          });
+          console.log(`✅ Transação para parcela ${i + 1} criada com sucesso`);
+        }
+      } else {
           // Criar transação única (à vista ou a prazo sem parcelamento)
           await prisma.financialTransaction.create({
             data: {
@@ -879,6 +914,66 @@ export const saleController = {
       });
     } catch (error) {
       console.error('Erro ao calcular preview de parcelas:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        data: null
+      });
+    }
+  },
+
+  // Listar parcelas de uma venda
+  async listSaleInstallments(req: Request, res: Response<ApiResponse>) {
+    try {
+      const { saleId } = req.params;
+      const userId = (req as any).user.id;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { company: true }
+      });
+
+      if (!user || !user.companyId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Usuário não associado a uma empresa',
+          data: null
+        });
+      }
+
+      // Verificar se a venda pertence à empresa do usuário
+      const sale = await prisma.sale.findFirst({
+        where: {
+          id: saleId,
+          companyId: user.companyId
+        }
+      });
+
+      if (!sale) {
+        return res.status(404).json({
+          success: false,
+          message: 'Venda não encontrada',
+          data: null
+        });
+      }
+
+      // Buscar as parcelas da venda
+      const installments = await prisma.saleInstallment.findMany({
+        where: {
+          saleId: saleId
+        },
+        orderBy: {
+          installmentNumber: 'asc'
+        }
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Parcelas listadas com sucesso',
+        data: installments
+      });
+    } catch (error) {
+      console.error('Erro ao listar parcelas:', error);
       return res.status(500).json({
         success: false,
         message: 'Erro interno do servidor',
