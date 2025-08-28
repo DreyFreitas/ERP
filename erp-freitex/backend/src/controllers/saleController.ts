@@ -293,14 +293,21 @@ export const saleController = {
       }
 
       // Verificar se o prazo de pagamento existe (se fornecido)
+      let paymentTerm: any = null;
+      console.log('=== DEBUG PAYMENT TERM ===');
+      console.log('saleData.paymentTermId:', saleData.paymentTermId);
+      console.log('user.companyId:', user.companyId);
+      
       if (saleData.paymentTermId) {
-        const paymentTerm = await prisma.paymentTerm.findFirst({
+        paymentTerm = await prisma.paymentTerm.findFirst({
           where: {
             id: saleData.paymentTermId,
             companyId: user.companyId,
             isActive: true
           }
         });
+
+        console.log('paymentTerm encontrado:', paymentTerm);
 
         if (!paymentTerm) {
           return res.status(400).json({
@@ -312,8 +319,9 @@ export const saleController = {
       }
 
       // Verificar se o cliente existe (se fornecido)
+      let customer: any = null;
       if (saleData.customerId) {
-        const customer = await prisma.customer.findFirst({
+        customer = await prisma.customer.findFirst({
           where: {
             id: saleData.customerId,
             companyId: user.companyId,
@@ -327,6 +335,37 @@ export const saleController = {
             message: 'Cliente não encontrado',
             data: null
           });
+        }
+      }
+
+      // Regras de venda a prazo: se houve selection de prazo, cliente é obrigatório e deve estar apto
+      const isInstallmentSale = Boolean(saleData.paymentTermId);
+      if (isInstallmentSale) {
+        if (!saleData.customerId) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cliente é obrigatório para vendas a prazo',
+            data: null
+          });
+        }
+
+        // Validar capacidade de crédito do cliente
+        if (customer) {
+          // Bloqueios
+          if (customer.allowCreditPurchases === false) {
+            return res.status(400).json({
+              success: false,
+              message: 'Cliente não está autorizado a comprar a prazo',
+              data: null
+            });
+          }
+          if (customer.creditStatus && customer.creditStatus !== 'ACTIVE') {
+            return res.status(400).json({
+              success: false,
+              message: 'Cliente com crédito não ativo para compras a prazo',
+              data: null
+            });
+          }
         }
       }
 
@@ -423,14 +462,26 @@ export const saleController = {
       let totalFees = 0;
       let finalAmount = subtotalAfterDiscount;
 
+      console.log('=== DEBUG CÁLCULO FINAL AMOUNT ===');
+      console.log('subtotalAfterDiscount:', subtotalAfterDiscount);
+      console.log('saleData.mixedPayments:', saleData.mixedPayments);
+
       if (saleData.mixedPayments && saleData.mixedPayments.length > 0) {
         // Calcular taxas dos pagamentos mistos
         totalFees = saleData.mixedPayments.reduce((sum, payment) => {
           const fee = payment.fee || 0;
-          const feeAmount = (payment.originalAmount * fee) / 100;
+          const originalAmount = payment.originalAmount || payment.amount || 0;
+          const feeAmount = (originalAmount * fee) / 100;
+          console.log('payment.originalAmount:', payment.originalAmount);
+          console.log('payment.amount:', payment.amount);
+          console.log('originalAmount usado:', originalAmount);
+          console.log('payment.fee:', payment.fee);
+          console.log('feeAmount:', feeAmount);
           return sum + feeAmount;
         }, 0);
         finalAmount = subtotalAfterDiscount + totalFees;
+        console.log('totalFees (mixed):', totalFees);
+        console.log('finalAmount (mixed):', finalAmount);
       } else {
         // Calcular taxa do método de pagamento único
         const fee = Number(paymentMethod.fee) || 0;
@@ -438,14 +489,59 @@ export const saleController = {
           totalFees = (subtotalAfterDiscount * fee) / 100;
           finalAmount = subtotalAfterDiscount + totalFees;
         }
+        console.log('totalFees (single):', totalFees);
+        console.log('finalAmount (single):', finalAmount);
       }
 
-      // Determinar o status do pagamento baseado no método de pagamento
+      // Determinar o status do pagamento baseado no método/prazo de pagamento
       let paymentStatus: 'PENDING' | 'PAID' = 'PENDING';
-      
       // Se não há prazo de pagamento (pagamento à vista), marcar como PAGO
       if (!saleData.paymentTermId) {
         paymentStatus = 'PAID';
+      }
+      
+      // Calcular parcelas se for venda parcelada
+      let installments: Array<{ amount: number; dueDate: Date }> = [];
+      
+      console.log('=== DEBUG PARCELAMENTO ===');
+      console.log('saleData.paymentTermId:', saleData.paymentTermId);
+      console.log('paymentTerm:', paymentTerm);
+      console.log('paymentTerm?.isInstallment:', paymentTerm?.isInstallment);
+      
+      if (saleData.paymentTermId && paymentTerm && paymentTerm.isInstallment) {
+        console.log('✅ Criando parcelas...');
+        const installmentsCount = Number(paymentTerm.installmentsCount) || 1;
+        const installmentInterval = Number(paymentTerm.installmentInterval) || 30;
+        const installmentAmount = finalAmount / installmentsCount;
+        
+        console.log('installmentsCount:', installmentsCount);
+        console.log('installmentInterval:', installmentInterval);
+        console.log('installmentAmount:', installmentAmount);
+        console.log('finalAmount:', finalAmount);
+        
+        // Calcular data da primeira parcela baseada na configuração do prazo
+        const firstDueDate = new Date();
+        const daysToFirstInstallment = Number(paymentTerm.days) || 30;
+        firstDueDate.setDate(firstDueDate.getDate() + daysToFirstInstallment);
+        
+        console.log('daysToFirstInstallment:', daysToFirstInstallment);
+        console.log('firstDueDate:', firstDueDate);
+        
+        for (let i = 0; i < installmentsCount; i++) {
+          const dueDate = new Date(firstDueDate);
+          dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
+          installments.push({
+            amount: installmentAmount,
+            dueDate: dueDate
+          });
+        }
+        
+        console.log('✅ Parcelas criadas:', installments);
+      } else {
+        console.log('❌ Não criou parcelas - condições não atendidas');
+        console.log('saleData.paymentTermId:', saleData.paymentTermId);
+        console.log('paymentTerm:', paymentTerm);
+        console.log('paymentTerm?.isInstallment:', paymentTerm?.isInstallment);
       }
       
       // Criar a venda
@@ -463,7 +559,13 @@ export const saleController = {
           paymentTermId: saleData.paymentTermId,
           paymentStatus,
           notes: saleData.notes,
-          dueDate: saleData.paymentTermId ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null // 30 dias padrão
+          // Para vendas parceladas, usar a data da primeira parcela
+          dueDate: installments.length > 0 ? installments[0].dueDate : 
+            (saleData.paymentTermId
+              ? (paymentTerm && paymentTerm.days
+                  ? new Date(Date.now() + Number(paymentTerm.days) * 24 * 60 * 60 * 1000)
+                  : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000))
+              : null)
         }
       });
 
@@ -512,6 +614,29 @@ export const saleController = {
         });
       }
 
+      // Se venda a prazo, validar limite e atualizar consumo de crédito
+      if (isInstallmentSale && customer) {
+        const creditLimit = Number(customer.creditLimit || 0);
+        const creditUsed = Number(customer.creditUsed || 0);
+        const available = creditLimit - creditUsed;
+        if (creditLimit > 0 && available < Number(finalAmount)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Cliente sem limite de crédito suficiente para esta venda',
+            data: null
+          });
+        }
+
+        // Atualizar uso de crédito do cliente
+        await prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            creditUsed: Number(creditUsed) + Number(finalAmount),
+            creditAvailable: creditLimit > 0 ? (Number(creditLimit) - (Number(creditUsed) + Number(finalAmount))) : null
+          }
+        });
+      }
+
       // Criar transação financeira automaticamente
       try {
         // Buscar a conta configurada para o método de pagamento
@@ -553,32 +678,67 @@ export const saleController = {
           }
         }
 
-        // Criar transação financeira
-        await prisma.financialTransaction.create({
-          data: {
-            companyId: user.companyId,
-            accountId: targetAccount.id,
-            transactionType: 'INCOME',
-            description: `Venda ${saleNumber} - ${saleData.customerId ? 'Com cliente' : 'Sem cliente'}`,
-            amount: finalAmount, // Usar finalAmount para a transação financeira
-            paymentDate: new Date(),
-            status: paymentStatus === 'PAID' ? 'PAID' : 'PENDING',
-            category: 'Vendas',
-            referenceDocument: saleNumber,
-            notes: `Venda realizada via PDV - Método: ${paymentMethod.name}`,
-            userId
+        console.log('=== DEBUG FINANCIAL TRANSACTION ===');
+        console.log('targetAccount:', targetAccount);
+        console.log('installments.length:', installments.length);
+        console.log('installments:', installments);
+        
+        // Criar transações financeiras
+        if (installments.length > 0) {
+          console.log('✅ Criando transações para parcelas...');
+          // Criar uma transação para cada parcela
+          for (let i = 0; i < installments.length; i++) {
+            const installment = installments[i];
+            console.log(`Criando parcela ${i + 1}:`, installment);
+            await prisma.financialTransaction.create({
+              data: {
+                companyId: user.companyId,
+                accountId: targetAccount.id,
+                transactionType: 'INCOME',
+                description: `Venda ${saleNumber} - Parcela ${i + 1}/${installments.length} - ${saleData.customerId ? 'Com cliente' : 'Sem cliente'}`,
+                amount: installment.amount,
+                paymentDate: null, // Pendente
+                dueDate: installment.dueDate,
+                status: 'PENDING',
+                category: 'Vendas',
+                referenceDocument: `${saleNumber}-P${i + 1}`,
+                notes: `Parcela ${i + 1}/${installments.length} da venda ${saleNumber} - Método: ${paymentMethod.name}`,
+                userId
+              }
+            });
+            console.log(`✅ Parcela ${i + 1} criada com sucesso`);
           }
-        });
-
-        // Atualizar saldo da conta
-        await prisma.financialAccount.update({
-          where: { id: targetAccount.id },
-          data: {
-            currentBalance: {
-              increment: finalAmount
+        } else {
+          // Criar transação única (à vista ou a prazo sem parcelamento)
+          await prisma.financialTransaction.create({
+            data: {
+              companyId: user.companyId,
+              accountId: targetAccount.id,
+              transactionType: 'INCOME',
+              description: `Venda ${saleNumber} - ${saleData.customerId ? 'Com cliente' : 'Sem cliente'}`,
+              amount: finalAmount,
+              paymentDate: paymentStatus === 'PAID' ? new Date() : null,
+              dueDate: sale.dueDate,
+              status: paymentStatus === 'PAID' ? 'PAID' : 'PENDING',
+              category: 'Vendas',
+              referenceDocument: saleNumber,
+              notes: `Venda realizada via PDV - Método: ${paymentMethod.name}`,
+              userId
             }
-          }
-        });
+          });
+        }
+
+        // Atualizar saldo da conta somente para vendas à vista
+        if (paymentStatus === 'PAID') {
+          await prisma.financialAccount.update({
+            where: { id: targetAccount.id },
+            data: {
+              currentBalance: {
+                increment: finalAmount
+              }
+            }
+          });
+        }
       } catch (financialError) {
         console.error('Erro ao criar transação financeira:', financialError);
         // Não falhar a venda se a transação financeira falhar
@@ -633,6 +793,92 @@ export const saleController = {
       });
     } catch (error) {
       console.error('Erro ao criar venda:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        data: null
+      });
+    }
+  },
+
+  // Calcular preview de parcelas
+  async calculateInstallmentPreview(req: Request, res: Response<ApiResponse>) {
+    try {
+      const { paymentTermId, amount } = req.body;
+      
+      if (!paymentTermId || !amount) {
+        return res.status(400).json({
+          success: false,
+          message: 'paymentTermId e amount são obrigatórios',
+          data: null
+        });
+      }
+
+      const userId = (req as any).user.id;
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { company: true }
+      });
+
+      if (!user || !user.companyId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Usuário não associado a uma empresa',
+          data: null
+        });
+      }
+
+      const paymentTerm = await prisma.paymentTerm.findFirst({
+        where: {
+          id: paymentTermId,
+          companyId: user.companyId,
+          isActive: true
+        }
+      });
+
+      if (!paymentTerm) {
+        return res.status(404).json({
+          success: false,
+          message: 'Prazo de pagamento não encontrado',
+          data: null
+        });
+      }
+
+      if (!paymentTerm.isInstallment) {
+        return res.status(400).json({
+          success: false,
+          message: 'Este prazo não é parcelado',
+          data: null
+        });
+      }
+
+      const installmentsCount = Number(paymentTerm.installmentsCount) || 1;
+      const installmentInterval = Number(paymentTerm.installmentInterval) || 30;
+      const installmentAmount = Number(amount) / installmentsCount;
+      
+      // Calcular data da primeira parcela baseada na configuração do prazo
+      const firstDueDate = new Date();
+      const daysToFirstInstallment = Number(paymentTerm.days) || 30;
+      firstDueDate.setDate(firstDueDate.getDate() + daysToFirstInstallment);
+
+      const installments = [];
+      for (let i = 0; i < installmentsCount; i++) {
+        const dueDate = new Date(firstDueDate);
+        dueDate.setDate(dueDate.getDate() + (i * installmentInterval));
+        installments.push({
+          number: i + 1,
+          amount: installmentAmount,
+          dueDate: dueDate
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: 'Preview de parcelas calculado com sucesso',
+        data: installments
+      });
+    } catch (error) {
+      console.error('Erro ao calcular preview de parcelas:', error);
       return res.status(500).json({
         success: false,
         message: 'Erro interno do servidor',

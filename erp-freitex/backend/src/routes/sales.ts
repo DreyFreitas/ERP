@@ -19,6 +19,9 @@ router.get('/:id', saleController.getSaleById);
 // POST /api/sales - Criar nova venda
 router.post('/', saleController.createSale);
 
+// POST /api/sales/installment-preview - Calcular preview de parcelas
+router.post('/installment-preview', saleController.calculateInstallmentPreview);
+
 // PUT /api/sales/:id - Atualizar venda
 router.put('/:id', saleController.updateSale);
 

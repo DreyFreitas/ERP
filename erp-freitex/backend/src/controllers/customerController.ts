@@ -187,7 +187,29 @@ export class CustomerController {
         zipCode,
         birthDate,
         gender,
-        notes
+        notes,
+        // Controle de Crédito
+        creditLimit,
+        allowCreditPurchases,
+        creditStatus,
+        // Informações de Pagamento
+        preferredPaymentMethod,
+        paymentTerms,
+        discountPercentage,
+        // Classificação e Segmentação
+        customerType,
+        customerSegment,
+        loyaltyPoints,
+        // Controle de Vendas
+        maxInstallments,
+        minPurchaseAmount,
+        maxPurchaseAmount,
+        // Informações Adicionais
+        occupation,
+        company: companyName,
+        referenceName,
+        referencePhone,
+        referenceRelationship
       } = req.body;
 
       // Validar dados obrigatórios
@@ -249,6 +271,28 @@ export class CustomerController {
           birthDate: birthDate ? new Date(birthDate) : null,
           gender,
           notes,
+          // Controle de Crédito
+          creditLimit: creditLimit ? Number(creditLimit) : null,
+          allowCreditPurchases: allowCreditPurchases !== undefined ? allowCreditPurchases : true,
+          creditStatus: creditStatus || 'ACTIVE',
+          // Informações de Pagamento
+          preferredPaymentMethod,
+          paymentTerms,
+          discountPercentage: discountPercentage ? Number(discountPercentage) : null,
+          // Classificação e Segmentação
+          customerType: customerType || 'REGULAR',
+          customerSegment: customerSegment || 'C',
+          loyaltyPoints: loyaltyPoints ? Number(loyaltyPoints) : 0,
+          // Controle de Vendas
+          maxInstallments: maxInstallments ? Number(maxInstallments) : 12,
+          minPurchaseAmount: minPurchaseAmount ? Number(minPurchaseAmount) : null,
+          maxPurchaseAmount: maxPurchaseAmount ? Number(maxPurchaseAmount) : null,
+          // Informações Adicionais
+          occupation,
+          companyName,
+          referenceName,
+          referencePhone,
+          referenceRelationship,
           isActive: true
         }
       });
@@ -285,7 +329,29 @@ export class CustomerController {
         birthDate,
         gender,
         notes,
-        isActive
+        isActive,
+        // Controle de Crédito
+        creditLimit,
+        allowCreditPurchases,
+        creditStatus,
+        // Informações de Pagamento
+        preferredPaymentMethod,
+        paymentTerms,
+        discountPercentage,
+        // Classificação e Segmentação
+        customerType,
+        customerSegment,
+        loyaltyPoints,
+        // Controle de Vendas
+        maxInstallments,
+        minPurchaseAmount,
+        maxPurchaseAmount,
+        // Informações Adicionais
+        occupation,
+        company: companyName,
+        referenceName,
+        referencePhone,
+        referenceRelationship
       } = req.body;
 
       // Verificar se o cliente existe e pertence à empresa
@@ -356,7 +422,29 @@ export class CustomerController {
           birthDate: birthDate ? new Date(birthDate) : null,
           gender,
           notes,
-          isActive
+          isActive: isActive !== undefined ? isActive : existingCustomer.isActive,
+          // Controle de Crédito
+          creditLimit: creditLimit !== undefined ? Number(creditLimit) : existingCustomer.creditLimit,
+          allowCreditPurchases: allowCreditPurchases !== undefined ? allowCreditPurchases : existingCustomer.allowCreditPurchases,
+          creditStatus: creditStatus || existingCustomer.creditStatus,
+          // Informações de Pagamento
+          preferredPaymentMethod: preferredPaymentMethod !== undefined ? preferredPaymentMethod : existingCustomer.preferredPaymentMethod,
+          paymentTerms: paymentTerms !== undefined ? paymentTerms : existingCustomer.paymentTerms,
+          discountPercentage: discountPercentage !== undefined ? Number(discountPercentage) : existingCustomer.discountPercentage,
+          // Classificação e Segmentação
+          customerType: customerType || existingCustomer.customerType,
+          customerSegment: customerSegment || existingCustomer.customerSegment,
+          loyaltyPoints: loyaltyPoints !== undefined ? Number(loyaltyPoints) : existingCustomer.loyaltyPoints,
+          // Controle de Vendas
+          maxInstallments: maxInstallments !== undefined ? Number(maxInstallments) : existingCustomer.maxInstallments,
+          minPurchaseAmount: minPurchaseAmount !== undefined ? Number(minPurchaseAmount) : existingCustomer.minPurchaseAmount,
+          maxPurchaseAmount: maxPurchaseAmount !== undefined ? Number(maxPurchaseAmount) : existingCustomer.maxPurchaseAmount,
+          // Informações Adicionais
+          occupation: occupation !== undefined ? occupation : existingCustomer.occupation,
+          companyName: companyName !== undefined ? companyName : existingCustomer.companyName,
+          referenceName: referenceName !== undefined ? referenceName : existingCustomer.referenceName,
+          referencePhone: referencePhone !== undefined ? referencePhone : existingCustomer.referencePhone,
+          referenceRelationship: referenceRelationship !== undefined ? referenceRelationship : existingCustomer.referenceRelationship
         }
       });
 

@@ -193,6 +193,37 @@ model Customer {
   birthDate DateTime?
   gender    String?
   notes     String?
+  
+  // Controle de Crédito
+  creditLimit           Decimal?  @db.Decimal(10, 2)  // Limite de crédito para compras a prazo
+  creditUsed            Decimal?  @db.Decimal(10, 2)  // Crédito já utilizado
+  creditAvailable       Decimal?  @db.Decimal(10, 2)  // Crédito disponível (limite - utilizado)
+  allowCreditPurchases  Boolean   @default(true)      // Permite compras a prazo
+  creditStatus          String?   @default("ACTIVE")  // Status do crédito: ACTIVE, SUSPENDED, BLOCKED
+  
+  // Informações de Pagamento
+  preferredPaymentMethod String?  // Método de pagamento preferido
+  paymentTerms          String?   // Condições de pagamento padrão
+  discountPercentage    Decimal?  @db.Decimal(5, 2)   // Desconto padrão para o cliente (%)
+  
+  // Classificação e Segmentação
+  customerType          String?   @default("REGULAR") // Tipo de cliente: RETAIL, WHOLESALE, VIP, REGULAR
+  customerSegment       String?   @default("C")       // Segmento: A, B, C, D (A=melhor, D=pior)
+  loyaltyPoints         Int?      @default(0)         // Pontos de fidelidade
+  
+  // Controle de Vendas
+  maxInstallments       Int?      @default(12)        // Máximo de parcelas permitidas
+  minPurchaseAmount     Decimal?  @db.Decimal(10, 2)  // Valor mínimo para compras a prazo
+  maxPurchaseAmount     Decimal?  @db.Decimal(10, 2)  // Valor máximo para compras a prazo
+  
+  // Informações Adicionais
+  occupation            String?   // Profissão/ocupação
+  companyName           String?   // Empresa onde trabalha
+  referenceName         String?   // Nome de referência
+  referencePhone        String?   // Telefone de referência
+  referenceRelationship String?   // Relacionamento com referência
+  
+  // Controle de Atividade
   isActive  Boolean   @default(true)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

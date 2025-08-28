@@ -12,7 +12,7 @@ BEGIN
             (SELECT id FROM companies LIMIT 1),
             'Andrey Freitas',
             'dreyggs@gmail.com',
-            '$2b$10$/kRXlvU8pZxVppbFsqhQg.1JChF5owB21zCxFvn45V.qcTQEtb4P.',
+            '$2b$10$qD6EFCTCnqq7fPqIfjcQ7Okqx0l0Eur.tLWr0m8Oy7t74.oa3IWwi',
             'master',
             true,
             NOW(),
