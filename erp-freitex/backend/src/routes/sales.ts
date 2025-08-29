@@ -31,4 +31,7 @@ router.put('/:id', saleController.updateSale);
 // POST /api/sales/:id/cancel - Cancelar venda
 router.post('/:id/cancel', saleController.cancelSale);
 
+// POST /api/sales/register-payments - Registrar pagamentos de parcelas
+router.post('/register-payments', saleController.registerInstallmentPayments);
+
 export default router;

@@ -1341,5 +1341,142 @@ export const saleController = {
         data: null
       });
     }
+  },
+
+  // Registrar pagamento de parcelas
+  async registerInstallmentPayments(req: Request, res: Response<ApiResponse>) {
+    try {
+      const userId = (req as any).user.id;
+      const { installmentIds } = req.body;
+
+      if (!installmentIds || !Array.isArray(installmentIds) || installmentIds.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'IDs das parcelas são obrigatórios',
+          data: null
+        });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: { company: true }
+      });
+
+      if (!user || !user.companyId) {
+        return res.status(404).json({
+          success: false,
+          message: 'Usuário não associado a uma empresa',
+          data: null
+        });
+      }
+
+      // Atualizar status das parcelas para PAID
+      const updatedInstallments = await prisma.saleInstallment.updateMany({
+        where: {
+          id: { in: installmentIds },
+          sale: {
+            companyId: user.companyId
+          }
+        },
+        data: {
+          status: 'PAID',
+          paymentDate: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      // Buscar as vendas relacionadas às parcelas atualizadas
+      const installments = await prisma.saleInstallment.findMany({
+        where: {
+          id: { in: installmentIds }
+        },
+        include: {
+          sale: true
+        }
+      });
+
+      // Verificar se todas as parcelas de cada venda foram pagas
+      const saleIds = [...new Set(installments.map(inst => inst.saleId))];
+      
+      for (const saleId of saleIds) {
+        const saleInstallments = await prisma.saleInstallment.findMany({
+          where: { saleId }
+        });
+
+        const allPaid = saleInstallments.every(inst => inst.status === 'PAID');
+        
+        if (allPaid) {
+          // Atualizar status da venda para PAID
+          await prisma.sale.update({
+            where: { id: saleId },
+            data: {
+              paymentStatus: 'PAID',
+              updatedAt: new Date()
+            }
+          });
+        }
+      }
+
+      // Criar transações financeiras para registrar os pagamentos
+      for (const installment of installments) {
+        // Buscar informações da venda e cliente
+        const sale = await prisma.sale.findUnique({
+          where: { id: installment.saleId },
+          include: {
+            customer: true,
+            paymentMethod: true
+          }
+        });
+
+        if (sale) {
+          // Buscar uma conta financeira padrão se o método de pagamento não tiver conta vinculada
+          let accountId = sale.paymentMethod.accountId;
+          if (!accountId) {
+            const defaultAccount = await prisma.financialAccount.findFirst({
+              where: {
+                companyId: user.companyId,
+                isActive: true
+              },
+              orderBy: { createdAt: 'asc' }
+            });
+            accountId = defaultAccount?.id || null;
+          }
+
+          if (accountId) {
+            // Criar transação de receita (pagamento recebido)
+            await prisma.financialTransaction.create({
+              data: {
+                companyId: user.companyId,
+                accountId: accountId,
+                userId: userId,
+                transactionType: 'INCOME',
+                description: `Pagamento - ${sale.saleNumber}${installment.installmentNumber ? ` - Parcela ${installment.installmentNumber}` : ''}`,
+                amount: installment.amount,
+                status: 'PAID',
+                dueDate: new Date(),
+                category: 'Vendas',
+                referenceDocument: sale.saleNumber,
+                notes: `Pagamento de ${sale.customer?.name || 'Cliente'}`
+              }
+            });
+          }
+        }
+      }
+
+      return res.json({
+        success: true,
+        message: 'Pagamentos registrados com sucesso',
+        data: {
+          updatedCount: updatedInstallments.count
+        }
+      });
+    } catch (error) {
+      console.error('Erro ao registrar pagamentos:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Erro interno do servidor',
+        data: null
+      });
+    }
   }
 };
