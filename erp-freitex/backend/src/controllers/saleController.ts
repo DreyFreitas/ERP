@@ -1370,65 +1370,94 @@ export const saleController = {
         });
       }
 
-      // Atualizar status das parcelas para PAID
-      const updatedInstallments = await prisma.saleInstallment.updateMany({
-        where: {
-          id: { in: installmentIds },
-          sale: {
-            companyId: user.companyId
-          }
-        },
-        data: {
-          status: 'PAID',
-          paymentDate: new Date(),
-          updatedAt: new Date()
-        }
-      });
+      // Separar IDs de parcelas e vendas diretas
+      const installmentIdsToProcess: string[] = [];
+      const saleIdsToProcess: string[] = [];
 
-      // Buscar as vendas relacionadas às parcelas atualizadas
-      const installments = await prisma.saleInstallment.findMany({
-        where: {
-          id: { in: installmentIds }
-        },
-        include: {
-          sale: true
-        }
-      });
-
-      // Verificar se todas as parcelas de cada venda foram pagas
-      const saleIds = [...new Set(installments.map(inst => inst.saleId))];
-      
-      for (const saleId of saleIds) {
-        const saleInstallments = await prisma.saleInstallment.findMany({
-          where: { saleId }
+      // Verificar se cada ID é de uma parcela ou venda direta
+      for (const id of installmentIds) {
+        const installment = await prisma.saleInstallment.findUnique({
+          where: { id },
+          include: { sale: true }
         });
 
-        const allPaid = saleInstallments.every(inst => inst.status === 'PAID');
-        
-        if (allPaid) {
-          // Atualizar status da venda para PAID
-          await prisma.sale.update({
-            where: { id: saleId },
-            data: {
-              paymentStatus: 'PAID',
-              updatedAt: new Date()
-            }
+        if (installment) {
+          // É uma parcela
+          installmentIdsToProcess.push(id);
+        } else {
+          // Pode ser uma venda direta
+          const sale = await prisma.sale.findUnique({
+            where: { id },
+            include: { customer: true, paymentMethod: true }
           });
+
+          if (sale && sale.companyId === user.companyId) {
+            saleIdsToProcess.push(id);
+          }
         }
       }
 
-      // Criar transações financeiras para registrar os pagamentos
-      for (const installment of installments) {
-        // Buscar informações da venda e cliente
-        const sale = await prisma.sale.findUnique({
-          where: { id: installment.saleId },
-          include: {
-            customer: true,
-            paymentMethod: true
+      console.log('Parcelas a processar:', installmentIdsToProcess);
+      console.log('Vendas diretas a processar:', saleIdsToProcess);
+
+      // Processar parcelas
+      if (installmentIdsToProcess.length > 0) {
+        // Atualizar status das parcelas para PAID
+        await prisma.saleInstallment.updateMany({
+          where: {
+            id: { in: installmentIdsToProcess },
+            sale: {
+              companyId: user.companyId
+            }
+          },
+          data: {
+            status: 'PAID',
+            paymentDate: new Date(),
+            updatedAt: new Date()
           }
         });
 
-        if (sale) {
+        // Buscar as parcelas atualizadas
+        const installments = await prisma.saleInstallment.findMany({
+          where: {
+            id: { in: installmentIdsToProcess }
+          },
+          include: {
+            sale: {
+              include: {
+                customer: true,
+                paymentMethod: true
+              }
+            }
+          }
+        });
+
+        // Verificar se todas as parcelas de cada venda foram pagas
+        const saleIds = [...new Set(installments.map(inst => inst.saleId))];
+        
+        for (const saleId of saleIds) {
+          const saleInstallments = await prisma.saleInstallment.findMany({
+            where: { saleId }
+          });
+
+          const allPaid = saleInstallments.every(inst => inst.status === 'PAID');
+          
+          if (allPaid) {
+            // Atualizar status da venda para PAID
+            await prisma.sale.update({
+              where: { id: saleId },
+              data: {
+                paymentStatus: 'PAID',
+                updatedAt: new Date()
+              }
+            });
+          }
+        }
+
+        // Criar transações financeiras para as parcelas
+        for (const installment of installments) {
+          const sale = installment.sale;
+          
           // Buscar uma conta financeira padrão se o método de pagamento não tiver conta vinculada
           let accountId = sale.paymentMethod.accountId;
           if (!accountId) {
@@ -1463,11 +1492,73 @@ export const saleController = {
         }
       }
 
+      // Processar vendas diretas
+      if (saleIdsToProcess.length > 0) {
+        // Atualizar status das vendas diretas para PAID
+        await prisma.sale.updateMany({
+          where: {
+            id: { in: saleIdsToProcess },
+            companyId: user.companyId
+          },
+          data: {
+            paymentStatus: 'PAID',
+            updatedAt: new Date()
+          }
+        });
+
+        // Buscar as vendas atualizadas
+        const sales = await prisma.sale.findMany({
+          where: {
+            id: { in: saleIdsToProcess }
+          },
+          include: {
+            customer: true,
+            paymentMethod: true
+          }
+        });
+
+        // Criar transações financeiras para as vendas diretas
+        for (const sale of sales) {
+          // Buscar uma conta financeira padrão se o método de pagamento não tiver conta vinculada
+          let accountId = sale.paymentMethod.accountId;
+          if (!accountId) {
+            const defaultAccount = await prisma.financialAccount.findFirst({
+              where: {
+                companyId: user.companyId,
+                isActive: true
+              },
+              orderBy: { createdAt: 'asc' }
+            });
+            accountId = defaultAccount?.id || null;
+          }
+
+          if (accountId) {
+            // Criar transação de receita (pagamento recebido)
+            await prisma.financialTransaction.create({
+              data: {
+                companyId: user.companyId,
+                accountId: accountId,
+                userId: userId,
+                transactionType: 'INCOME',
+                description: `Pagamento - ${sale.saleNumber}`,
+                amount: sale.finalAmount,
+                status: 'PAID',
+                dueDate: new Date(),
+                category: 'Vendas',
+                referenceDocument: sale.saleNumber,
+                notes: `Pagamento de ${sale.customer?.name || 'Cliente'}`
+              }
+            });
+          }
+        }
+      }
+
       return res.json({
         success: true,
         message: 'Pagamentos registrados com sucesso',
         data: {
-          updatedCount: updatedInstallments.count
+          processedInstallments: installmentIdsToProcess.length,
+          processedSales: saleIdsToProcess.length
         }
       });
     } catch (error) {
