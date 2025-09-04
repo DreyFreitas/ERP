@@ -1,0 +1,886 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+---
+description:
+globs:
+alwaysApply: true
+---
+
+# 🚀 Regras de Desenvolvimento e Contexto - ERP Freitex Softwares
+
+## 📋 Visão Geral do Projeto
+
+**Nome**: ERP Freitex Softwares  
+**Tipo**: Sistema ERP web-based multi-tenant  
+**Foco**: Pequenas e médias empresas (inicialmente lojas de roupas)  
+**Escalabilidade**: Sistema escalável para outros segmentos  
+**Acesso**: Web-based via Docker  
+**Portas**: A partir da 7000  
+**Status**: Em desenvolvimento ativo
+
+## 🎯 Objetivo Principal
+
+Criar um sistema ERP completo para a loja de roupas do pai do desenvolvedor, mas com arquitetura escalável para atender outras empresas através de modelo SaaS (Software as a Service).
+
+---
+
+## 🏗️ Stack Tecnológica DEFINIDA E OBRIGATÓRIA
+
+### Frontend
+- **Framework**: React.js + TypeScript ✅
+- **UI Library**: Material-UI (MUI) ✅
+- **Design System**: Cores da marca (#001f40, #00c7cd) + paleta complementar ✅
+- **Estado**: Context API ou Redux Toolkit ✅
+- **Roteamento**: React Router com estrutura de layout único ✅
+- **Formulários**: React Hook Form + Yup ✅
+
+### Backend
+- **Runtime**: Node.js + TypeScript ✅
+- **Framework**: Express.js ✅
+- **ORM**: Prisma ✅
+- **Autenticação**: JWT + Refresh Tokens ✅
+- **Validação**: Joi ou Zod ✅
+
+### Banco de Dados
+- **SGBD**: PostgreSQL ✅
+- **Multi-tenancy**: Schema isolation (tenant_{id}) ✅
+- **Migrations**: Prisma Migrate ✅
+- **Seeding**: Prisma Seed ✅
+
+### Infraestrutura
+- **Containerização**: Docker + Docker Compose ✅
+- **Cache**: Redis (opcional) ✅
+- **Monitoramento**: Winston (logs) ✅
+- **Deploy**: DigitalOcean/AWS ✅
+
+---
+
+## 🔧 Configuração de Portas OBRIGATÓRIA
+
+- **Frontend**: 7000
+- **Backend API**: 7001
+- **PostgreSQL**: 7002
+- **Redis**: 7003 (opcional)
+- **Adminer**: 7004 (gerenciamento do banco)
+
+---
+
+## 🚨 REGRAS DE DESENVOLVIMENTO OBRIGATÓRIAS
+
+### 1. **Estrutura de Layout Único - SEMPRE USAR ESTE PADRÃO**
+
+Para evitar recarregamento de página e garantir navegação suave, **SEMPRE** usar estrutura de layout único:
+
+#### ✅ **CORRETO - Layout Único:**
+```jsx
+// Componente de rotas com layout único
+const CompanyRoutes: React.FC = () => {
+  return (
+    <CompanyLayout>
+      <Routes>
+        <Route path="/company/dashboard" element={<CompanyDashboard />} />
+        <Route path="/company/products" element={<ProductsPage />} />
+        <Route path="/company/stock" element={<StockPage />} />
+        // ... mais rotas
+      </Routes>
+    </CompanyLayout>
+  );
+};
+
+// Rota principal com wildcard
+<Route path="/company/*" element={<CompanyRoutes />} />
+```
+
+#### ❌ **INCORRETO - Layout por rota (causa recarregamento):**
+```jsx
+// NUNCA fazer assim - cada rota com seu próprio layout
+<Route path="/company/dashboard" element={<CompanyLayout><CompanyDashboard /></CompanyLayout>} />
+<Route path="/company/products" element={<CompanyLayout><ProductsPage /></CompanyLayout>} />
+<Route path="/company/stock" element={<CompanyLayout><StockPage /></CompanyLayout>} />
+```
+
+### 2. **Navegação Suave - SEMPRE usar React Router**
+
+- **✅ CORRETO**: `navigate('/company/products')`
+- **❌ INCORRETO**: `window.location.href = '/company/products'`
+
+### 3. **Consistência Visual - SEMPRE seguir o Design System**
+
+- **Cores Primárias**: #001f40 (azul escuro), #00c7cd (azul ciano)
+- **Paleta Completa**: Usar variações definidas no DESIGN_SYSTEM.md
+- **Componentes**: Sempre usar Material-UI para consistência
+- **Espaçamento**: Seguir sistema de espaçamento definido
+
+### 4. **Sistema de Grid - SEMPRE usar CSS Grid em vez de Material-UI Grid**
+
+#### ✅ **CORRETO - CSS Grid com Material-UI Box:**
+```jsx
+// Usar Box com display: 'grid' para layouts responsivos
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+  gap: 2 
+}}>
+  <Card>Conteúdo 1</Card>
+  <Card>Conteúdo 2</Card>
+</Box>
+
+// Para layouts complexos
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: '1fr 400px',  // Layout principal + sidebar
+  gap: 3 
+}}>
+  <MainContent />
+  <Sidebar />
+</Box>
+
+// Para cards responsivos
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', 
+  gap: 2 
+}}>
+  {items.map(item => <ProductCard key={item.id} item={item} />)}
+</Box>
+```
+
+#### ❌ **INCORRETO - Material-UI Grid:**
+```jsx
+// NUNCA usar Material-UI Grid
+import { Grid } from '@mui/material';
+
+<Grid container spacing={2}>
+  <Grid item xs={12} md={6}>
+    <Card>Conteúdo</Card>
+  </Grid>
+</Grid>
+```
+
+#### **Padrões de Grid Recomendados:**
+- **Dashboard**: `gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }`
+- **Formulários**: `gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }`
+- **Cards**: `gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))'`
+- **Layout Principal**: `gridTemplateColumns: '1fr 400px'` (conteúdo + sidebar)
+- **Tabelas**: `gridTemplateColumns: '1fr auto auto auto'` (conteúdo + ações)
+
+### 5. **Paleta de Cores - SEMPRE usar as cores definidas no tema**
+
+#### **Cores Obrigatórias:**
+```typescript
+// Cores primárias (OBRIGATÓRIAS)
+primary: {
+  main: '#001f40',      // Azul escuro principal
+  light: '#004b98',     // Azul claro
+  dark: '#001a35',      // Azul mais escuro
+  contrastText: '#ffffff'
+},
+secondary: {
+  main: '#00c7cd',      // Azul ciano secundário
+  light: '#00fbff',     // Ciano claro
+  dark: '#009fa5',      // Ciano escuro
+  contrastText: '#ffffff'
+}
+
+// Cores de status (OBRIGATÓRIAS)
+success: { main: '#22c55e' }    // Verde
+warning: { main: '#f59e0b' }    // Laranja
+error: { main: '#ef4444' }      // Vermelho
+info: { main: '#3b82f6' }       // Azul info
+```
+
+#### **Uso Correto:**
+```jsx
+// ✅ CORRETO - Usar cores do tema
+<Button variant="contained" color="primary">Botão</Button>
+<Chip color="success" label="Sucesso" />
+<Alert severity="warning">Aviso</Alert>
+
+// ✅ CORRETO - Usar cores customizadas quando necessário
+<Box sx={{ backgroundColor: 'primary.main' }}>
+  <Typography sx={{ color: 'primary.contrastText' }}>
+    Texto
+  </Typography>
+</Box>
+```
+
+#### **❌ INCORRETO:**
+```jsx
+// NUNCA usar cores hardcoded
+<Button sx={{ backgroundColor: '#ff0000' }}>Botão</Button>
+<Box sx={{ color: 'red' }}>Texto</Box>
+```
+
+### 6. **Componentes Material-UI - SEMPRE usar componentes nativos**
+
+#### **✅ CORRETO - Componentes nativos:**
+```jsx
+import {
+  Box,
+  Card,
+  CardContent,
+  Typography,
+  Button,
+  TextField,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  Chip,
+  Alert,
+  Snackbar,
+  CircularProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Checkbox,
+  FormControlLabel
+} from '@mui/material';
+
+// Usar componentes conforme documentação oficial
+<Card>
+  <CardContent>
+    <Typography variant="h6">Título</Typography>
+    <Button variant="contained" color="primary">
+      Ação
+    </Button>
+  </CardContent>
+</Card>
+```
+
+#### **❌ INCORRETO - Componentes customizados desnecessários:**
+```jsx
+// NUNCA criar componentes que já existem no Material-UI
+const CustomButton = styled('button')({
+  // ... estilos customizados
+});
+
+// Usar Button nativo do Material-UI
+<Button variant="contained" color="primary">
+  Ação
+</Button>
+```
+
+### 7. **Responsividade - SEMPRE implementar breakpoints corretos**
+
+#### **Breakpoints Obrigatórios:**
+```typescript
+// Sempre usar estes breakpoints
+xs: 0,      // Extra small: 0px
+sm: 600,    // Small: 600px
+md: 900,    // Medium: 900px
+lg: 1200,   // Large: 1200px
+xl: 1536    // Extra large: 1536px
+```
+
+#### **Implementação Correta:**
+```jsx
+// ✅ CORRETO - Breakpoints responsivos
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { 
+    xs: '1fr',                    // Mobile: 1 coluna
+    sm: 'repeat(2, 1fr)',        // Tablet: 2 colunas
+    md: 'repeat(3, 1fr)',        // Desktop: 3 colunas
+    lg: 'repeat(4, 1fr)'         // Large: 4 colunas
+  }, 
+  gap: { xs: 1, sm: 2, md: 3 }  // Gap responsivo
+}}>
+  {items.map(item => <Card key={item.id}>{item.name}</Card>)}
+</Box>
+
+// ✅ CORRETO - Espaçamento responsivo
+<Box sx={{ 
+  p: { xs: 2, sm: 3, md: 4 },   // Padding responsivo
+  m: { xs: 1, sm: 2, md: 3 }    // Margin responsivo
+}}>
+  Conteúdo
+</Box>
+```
+
+### 8. **Estrutura de Pastas - SEMPRE manter organização**
+
+```
+erp-freitex/
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # Componentes reutilizáveis
+│   │   ├── pages/              # Páginas principais
+│   │   ├── hooks/              # Custom hooks
+│   │   ├── services/           # Serviços de API
+│   │   ├── utils/              # Funções utilitárias
+│   │   ├── types/              # Tipos TypeScript
+│   │   ├── contexts/           # Contextos React
+│   │   ├── styles/             # Estilos globais
+│   │   └── assets/             # Imagens e recursos
+│   ├── public/
+│   └── package.json
+├── backend/
+│   ├── src/
+│   │   ├── controllers/        # Controladores da API
+│   │   ├── services/           # Lógica de negócio
+│   │   ├── models/             # Modelos de dados
+│   │   ├── middleware/         # Middlewares
+│   │   ├── routes/             # Rotas da API
+│   │   ├── utils/              # Utilitários
+│   │   └── types/              # Tipos TypeScript
+│   ├── prisma/                 # Schema e migrations
+│   └── package.json
+├── docker/                     # Configurações Docker
+├── docs/                       # Documentação
+└── scripts/                    # Scripts utilitários
+```
+
+### 9. **Padrões de Layout por Página - SEMPRE seguir estes padrões**
+
+#### **Dashboard (CompanyDashboard.tsx):**
+```jsx
+// ✅ CORRETO - Layout de dashboard
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' }, 
+  gap: 2 
+}}>
+  <Card>Estatística 1</Card>
+  <Card>Estatística 2</Card>
+</Box>
+```
+
+#### **Listagem de Produtos (CompanyProducts.tsx):**
+```jsx
+// ✅ CORRETO - Grid responsivo para produtos
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(5, 1fr)' }, 
+  gap: 2, 
+  alignItems: 'end' 
+}}>
+  <TextField label="Nome" />
+  <TextField label="SKU" />
+  <TextField label="Código de Barras" />
+  <TextField label="Preço" />
+  <Button>Gerar EAN-13</Button>
+</Box>
+```
+
+#### **PDV (CompanyPDV.tsx):**
+```jsx
+// ✅ CORRETO - Layout principal do PDV
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: '1fr 400px',  // Produtos + Carrinho
+  gap: 3 
+}}>
+  <ProductGrid />
+  <ShoppingCart />
+</Box>
+
+// ✅ CORRETO - Grid de produtos
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+  gap: 2 
+}}>
+  {products.map(product => <ProductCard key={product.id} product={product} />)}
+</Box>
+```
+
+#### **Gestão de Estoque (StockManagement.tsx):**
+```jsx
+// ✅ CORRETO - Layout de formulários
+<Box display="grid" gridTemplateColumns="1fr" gap={2}>
+  <TextField label="Produto" />
+  <TextField label="Quantidade" />
+  <TextField label="Custo Unitário" />
+</Box>
+```
+
+#### **Financeiro (CompanyFinancial.tsx):**
+```jsx
+// ✅ CORRETO - Cards de estatísticas
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, 
+  gap: 3, 
+  mb: 3 
+}}>
+  <StatCard title="Receitas" value={stats.income} />
+  <StatCard title="Despesas" value={stats.expenses} />
+  <StatCard title="Saldo" value={stats.balance} />
+  <StatCard title="Pendente" value={stats.pending} />
+</Box>
+```
+
+### 10. **Padrões de Formulários - SEMPRE usar estes layouts**
+
+#### **Formulários Simples (1-2 campos):**
+```jsx
+// ✅ CORRETO - Formulário simples
+<Box sx={{ display: 'grid', gap: 2 }}>
+  <TextField label="Nome" fullWidth />
+  <TextField label="Email" fullWidth />
+</Box>
+```
+
+#### **Formulários Médios (3-5 campos):**
+```jsx
+// ✅ CORRETO - Formulário médio
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)' }, 
+  gap: 2 
+}}>
+  <TextField label="Nome" />
+  <TextField label="Email" />
+  <TextField label="Telefone" />
+  <TextField label="Endereço" />
+  <TextField label="Cidade" sx={{ gridColumn: { xs: '1', md: '1 / -1' } }} />
+</Box>
+```
+
+#### **Formulários Complexos (6+ campos):**
+```jsx
+// ✅ CORRETO - Formulário complexo
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, 
+  gap: 2 
+}}>
+  <TextField label="Campo 1" />
+  <TextField label="Campo 2" />
+  <TextField label="Campo 3" />
+  <TextField label="Campo 4" />
+  <TextField label="Campo 5" />
+  <TextField label="Campo 6" />
+  <TextField label="Campo 7" sx={{ gridColumn: { xs: '1', md: '1 / -1' } }} />
+</Box>
+```
+
+### 11. **Padrões de Tabelas - SEMPRE usar estes layouts**
+
+#### **Tabelas com Ações:**
+```jsx
+// ✅ CORRETO - Tabela com ações
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: '1fr auto auto auto',  // Conteúdo + Ações
+  gap: 1 
+}}>
+  <Typography>Nome do Produto</Typography>
+  <IconButton><EditIcon /></IconButton>
+  <IconButton><DeleteIcon /></IconButton>
+  <IconButton><ViewIcon /></IconButton>
+</Box>
+```
+
+#### **Tabelas Responsivas:**
+```jsx
+// ✅ CORRETO - Tabela responsiva
+<Box sx={{ 
+  display: 'grid', 
+  gridTemplateColumns: { 
+    xs: '1fr', 
+    sm: 'repeat(auto-fit, minmax(200px, 1fr))' 
+  }, 
+  gap: 2 
+}}>
+  {items.map(item => (
+    <Card key={item.id}>
+      <CardContent>
+        <Typography variant="h6">{item.name}</Typography>
+        <Typography>{item.description}</Typography>
+      </CardContent>
+    </Card>
+  ))}
+</Box>
+```
+
+### 12. **Padrões de Espaçamento - SEMPRE usar sistema consistente**
+
+#### **Espaçamentos Obrigatórios:**
+```typescript
+// Usar sempre estes valores de espaçamento
+const spacing = {
+  xs: 0.5,   // 4px
+  sm: 1,     // 8px
+  md: 2,     // 16px
+  lg: 3,     // 24px
+  xl: 4      // 32px
+};
+```
+
+#### **Implementação Correta:**
+```jsx
+// ✅ CORRETO - Espaçamento consistente
+<Box sx={{ 
+  p: 2,        // Padding: 16px
+  m: 1,        // Margin: 8px
+  gap: 2,      // Gap: 16px
+  mb: 3        // Margin bottom: 24px
+}}>
+  Conteúdo
+</Box>
+
+// ✅ CORRETO - Espaçamento responsivo
+<Box sx={{ 
+  p: { xs: 1, sm: 2, md: 3 },   // Padding responsivo
+  gap: { xs: 1, sm: 2, md: 3 }  // Gap responsivo
+}}>
+  Conteúdo
+</Box>
+```
+
+### 13. **Padrões de Tipografia - SEMPRE usar variantes corretas**
+
+#### **Hierarquia de Títulos:**
+```jsx
+// ✅ CORRETO - Hierarquia de títulos
+<Typography variant="h4" component="h1">Título Principal</Typography>
+<Typography variant="h5" component="h2">Subtítulo</Typography>
+<Typography variant="h6" component="h3">Seção</Typography>
+<Typography variant="body1">Texto normal</Typography>
+<Typography variant="body2" color="text.secondary">Texto secundário</Typography>
+<Typography variant="caption">Texto pequeno</Typography>
+```
+
+#### **Uso Correto:**
+```jsx
+// ✅ CORRETO - Títulos com cores do tema
+<Typography variant="h4" sx={{ color: 'primary.main' }}>
+  Dashboard
+</Typography>
+
+// ✅ CORRETO - Texto com peso correto
+<Typography variant="h6" sx={{ fontWeight: 600 }}>
+  Estatísticas
+</Typography>
+```
+
+### 14. **Padrões de Estados e Loading - SEMPRE implementar**
+
+#### **Estados de Loading:**
+```jsx
+// ✅ CORRETO - Loading com CircularProgress
+{loading ? (
+  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+    <CircularProgress />
+  </Box>
+) : (
+  <Content />
+)}
+
+// ✅ CORRETO - Loading em botões
+<Button 
+  variant="contained" 
+  disabled={isLoading}
+  startIcon={isLoading ? <CircularProgress size={20} /> : null}
+>
+  {isLoading ? 'Salvando...' : 'Salvar'}
+</Button>
+```
+
+#### **Estados de Erro:**
+```jsx
+// ✅ CORRETO - Tratamento de erro
+{error ? (
+  <Alert severity="error" sx={{ mb: 2 }}>
+    {error}
+  </Alert>
+) : null}
+
+// ✅ CORRETO - Snackbar para feedback
+<Snackbar 
+  open={snackbar.open} 
+  autoHideDuration={6000} 
+  onClose={handleCloseSnackbar}
+>
+  <Alert severity={snackbar.severity}>
+    {snackbar.message}
+  </Alert>
+</Snackbar>
+```
+
+### 15. **Padrões de Validação - SEMPRE implementar**
+
+#### **Validação de Formulários:**
+```jsx
+// ✅ CORRETO - Validação com React Hook Form
+const { register, handleSubmit, formState: { errors } } = useForm();
+
+<TextField 
+  label="Nome"
+  error={!!errors.name}
+  helperText={errors.name?.message}
+  {...register('name', { required: 'Nome é obrigatório' })}
+/>
+
+// ✅ CORRETO - Validação manual
+const handleSubmit = () => {
+  if (!form.name || !form.salePrice) {
+    setError('Preencha todos os campos obrigatórios');
+    return;
+  }
+  // ... continuar
+};
+```
+
+### 16. **Padrões de Performance - SEMPRE otimizar**
+
+#### **Memoização:**
+```jsx
+// ✅ CORRETO - Usar useCallback para funções
+const handleAddToCart = useCallback((product: Product) => {
+  setCart(prev => [...prev, product]);
+}, []);
+
+// ✅ CORRETO - Usar useMemo para cálculos pesados
+const totalValue = useMemo(() => {
+  return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+}, [cart]);
+```
+
+#### **Lazy Loading:**
+```jsx
+// ✅ CORRETO - Lazy loading de componentes
+const LazyComponent = lazy(() => import('./LazyComponent'));
+
+<Suspense fallback={<CircularProgress />}>
+  <LazyComponent />
+</Suspense>
+```
+
+## 🎨 Design System OBRIGATÓRIO
+
+### Cores da Marca
+```css
+/* Azul Escuro - Cor Principal */
+--primary-dark: #001f40;
+--primary-cyan: #00c7cd;
+
+/* Paleta Completa */
+--primary-900: #001f40; /* Logo */
+--primary-800: #002a56;
+--primary-700: #00356c;
+--primary-600: #004082;
+--primary-500: #004b98;
+--primary-400: #0056ae;
+--primary-300: #0061c4;
+--primary-200: #006cda;
+--primary-100: #0077f0;
+
+--secondary-900: #00c7cd; /* Logo */
+--secondary-800: #00d4da;
+--secondary-700: #00e1e7;
+--secondary-600: #00eef4;
+--secondary-500: #00fbff;
+--secondary-400: #1affff;
+--secondary-300: #33ffff;
+--secondary-200: #4dffff;
+--secondary-100: #66ffff;
+```
+
+### Cores de Status
+```css
+--success-500: #22c55e;
+--warning-500: #f59e0b;
+--error-500: #ef4444;
+--info-500: #3b82f6;
+```
+
+### Implementação no Material-UI
+```typescript
+export const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#001f40',
+      light: '#004b98',
+      dark: '#001a35',
+      contrastText: '#ffffff',
+    },
+    secondary: {
+      main: '#00c7cd',
+      light: '#00fbff',
+      dark: '#009fa5',
+      contrastText: '#ffffff',
+    },
+    // ... outras cores
+  },
+});
+```
+
+---
+
+## 🔐 Segurança e Boas Práticas OBRIGATÓRIAS
+
+### Autenticação
+- ✅ JWT com refresh tokens
+- ✅ Middleware de autenticação
+- ✅ Controle de permissões por módulo
+- ✅ Rate limiting
+
+### Dados
+- ✅ Isolamento por tenant
+- ✅ Validação de entrada
+- ✅ Sanitização de dados
+- ✅ Backup automático
+
+### Performance
+- ✅ Índices otimizados
+- ✅ Paginação
+- ✅ Cache Redis (futuro)
+- ✅ Lazy loading
+
+---
+
+## 🚀 Roadmap de Desenvolvimento (Próximos Passos)
+
+### Fase Atual: Melhorias e Escalabilidade (Meses 9-10)
+
+#### Semana 33-34: Notificações e Alertas
+- [ ] Sistema de notificações
+- [ ] Alertas de estoque
+- [ ] Vencimento de contas
+- [ ] Relatórios automáticos
+- [ ] Notificações push
+
+#### Semana 35-36: Integrações
+- [ ] APIs para terceiros
+- [ ] Webhooks
+- [ ] Integração com sistemas fiscais
+- [ ] Gateway de pagamento
+- [ ] Correios para frete
+
+#### Semana 37-38: Performance e Otimização
+- [ ] Otimização de queries
+- [ ] Cache Redis
+- [ ] Paginação
+- [ ] Lazy loading
+- [ ] Compressão de imagens
+
+#### Semana 39-40: Testes e Deploy
+- [ ] Testes unitários
+- [ ] Testes de integração
+- [ ] Testes E2E
+- [ ] Deploy em produção
+- [ ] Monitoramento
+
+---
+
+## 🧪 Testes e Qualidade OBRIGATÓRIOS
+
+### Testes
+- ✅ Unit tests (Jest)
+- ✅ Integration tests (Supertest)
+- ✅ E2E tests (Cypress)
+
+### Qualidade
+- ✅ ESLint + Prettier
+- ✅ Husky (git hooks)
+- ✅ TypeScript strict mode
+- ✅ Code review obrigatório
+
+---
+
+## 🚀 Deploy e Monitoramento
+
+### Ambiente de Desenvolvimento
+- ✅ Docker Compose local
+- ✅ Hot reload
+- ✅ Debug mode
+
+### Ambiente de Produção
+- ✅ DigitalOcean/AWS
+- ✅ CI/CD pipeline
+- ✅ Monitoramento com logs
+- ✅ Backup automático
+
+---
+
+## 📝 Padrões de Código OBRIGATÓRIOS
+
+### Frontend (React + TypeScript)
+```typescript
+// ✅ SEMPRE usar interfaces para props
+interface ProductCardProps {
+  product: Product;
+  onAddToCart: (product: Product) => void;
+  onEdit: (product: Product) => void;
+}
+
+// ✅ SEMPRE usar componentes funcionais com hooks
+const ProductCard: React.FC<ProductCardProps> = ({ product, onAddToCart, onEdit }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // ✅ SEMPRE usar try-catch para operações assíncronas
+  const handleAddToCart = async () => {
+    try {
+      setIsLoading(true);
+      await onAddToCart(product);
+    } catch (error) {
+      console.error('Erro ao adicionar ao carrinho:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card>
+      {/* ✅ SEMPRE usar Material-UI components */}
+      <CardContent>
+        <Typography variant="h6">{product.name}</Typography>
+      </CardContent>
+    </Card>
+  );
+};
+```
+
+### Backend (Node.js + TypeScript)
+```typescript
+// ✅ SEMPRE usar interfaces para tipos
+interface CreateProductData {
+  name: string;
+  description?: string;
+  sku?: string;
+  salePrice: number;
+  costPrice?: number;
+  categoryId?: string;
+}
+
+// ✅ SEMPRE usar try-catch para operações do banco
+export const createProduct = async (req: Request, res: Response) => {
+  try {
+    const productData: CreateProductData = req.body;
+    
+    // ✅ SEMPRE validar dados de entrada
+    if (!productData.name || !productData.salePrice) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Nome e preço são obrigatórios' 
+      });
+    }
+
+    const product = await prisma.product.create({
+      data: {
+        ...productData,
+        companyId: req.user.companyId, // ✅ SEMPRE filtrar por empresa
+      }
+    });
+
+    return res.status(201).json({ success: true, data: product });
+  } catch (error) {
+    console.error('Erro ao criar produto:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Erro interno do servidor' 
+    });
+  }
+};
+```
+
+---
