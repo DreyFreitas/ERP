@@ -17,10 +17,19 @@ export const authenticateToken = async (
   next: NextFunction
 ) => {
   try {
+    console.log('🔐 Middleware de autenticação - Iniciando...');
+    console.log('📋 Headers recebidos:', req.headers);
+    console.log('🌐 URL da requisição:', req.url);
+    console.log('📝 Método da requisição:', req.method);
+    
     const authHeader = req.headers['authorization'];
+    console.log('🔑 Header Authorization:', authHeader);
+    
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    console.log('🎫 Token extraído:', token ? `${token.substring(0, 20)}...` : 'Nenhum token');
 
     if (!token) {
+      console.log('❌ Token não fornecido');
       return res.status(401).json({
         success: false,
         message: 'Token de acesso não fornecido',
@@ -69,6 +78,10 @@ export const authenticateToken = async (
     req.user = user as User;
     req.companyId = user.companyId || undefined;
 
+    console.log('✅ Autenticação bem-sucedida!');
+    console.log('👤 Usuário:', user.name, `(${user.role})`);
+    console.log('🏢 Company ID:', user.companyId || 'Nenhum');
+    
     return next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {

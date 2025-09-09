@@ -2,21 +2,24 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Copiar arquivos de dependências
-COPY package*.json ./
+# Copiar código fonte do frontend
+COPY frontend/ .
 
 # Instalar dependências
-RUN npm install --omit=dev
+RUN npm install
 
-# Copiar código fonte
-COPY . .
+# Build da aplicação
+RUN npm run build
+
+# Instalar serve para servir arquivos estáticos
+RUN npm install -g serve
 
 # Expor porta
 EXPOSE 7000
 
 # Variáveis de ambiente
 ENV PORT=7000
-ENV REACT_APP_API_URL=http://localhost:7001
+ENV REACT_APP_API_URL=/api
 
-# Comando para iniciar
-CMD ["npm", "start"]
+# Comando para servir arquivos estáticos
+CMD ["serve", "-s", "build", "-l", "7000"]

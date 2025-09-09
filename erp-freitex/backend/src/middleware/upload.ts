@@ -45,6 +45,41 @@ export const upload = multer({
 // Middleware para upload de imagens de produtos
 export const uploadProductImages = upload.array('images', 5);
 
+// Configuração específica para upload de backups
+const backupStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const backupDir = path.join(__dirname, '../../backups');
+    if (!fs.existsSync(backupDir)) {
+      fs.mkdirSync(backupDir, { recursive: true });
+    }
+    cb(null, backupDir);
+  },
+  filename: (req, file, cb) => {
+    // Manter nome original do arquivo para backups
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    cb(null, `imported_${timestamp}_${file.originalname}`);
+  }
+});
+
+// Filtro para aceitar apenas arquivos SQL
+const backupFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  if (file.mimetype === 'application/sql' || file.originalname.endsWith('.sql')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Tipo de arquivo não suportado. Apenas arquivos .sql são permitidos.'));
+  }
+};
+
+// Middleware para upload de backups
+export const uploadBackup = multer({
+  storage: backupStorage,
+  fileFilter: backupFileFilter,
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100MB para backups
+    files: 1 // Apenas 1 arquivo por upload
+  }
+}).single('backup');
+
 // Função para obter URL da imagem
 export const getImageUrl = (filename: string): string => {
   return `/uploads/${filename}`;

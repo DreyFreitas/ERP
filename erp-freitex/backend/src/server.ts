@@ -20,6 +20,8 @@ import financialRoutes from './routes/financial';
 import settingsRoutes from './routes/settings';
 import paymentTermRoutes from './routes/paymentTerms';
 import salesRoutes from './routes/sales';
+import backupRoutes from './routes/backupRoutes';
+import subscriptionRoutes from './routes/subscriptionRoutes';
 
 
 
@@ -79,20 +81,52 @@ app.use('/api/financial', financialRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/payment-terms', paymentTermRoutes);
 app.use('/api/sales', salesRoutes);
+app.use('/api/backup', backupRoutes);
+app.use('/api/subscriptions', subscriptionRoutes);
 
 
 
 // Servir arquivos estáticos (uploads) - DEPOIS das rotas da API
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
-// Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV
-  });
+// Health check robusto
+app.get('/health', async (req, res) => {
+  try {
+    // Verificar conexão com o banco de dados
+    const { PrismaClient } = await import('@prisma/client');
+    const prisma = new PrismaClient();
+    
+    await prisma.$queryRaw`SELECT 1`;
+    
+    // Verificar se as tabelas existem
+    const tableCount = await prisma.$queryRaw<[{ count: bigint }]>`
+      SELECT COUNT(*) as count 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `;
+    
+    const tablesExist = Number(tableCount[0].count) > 0;
+    
+    await prisma.$disconnect();
+    
+    res.status(200).json({
+      status: 'healthy',
+      database: 'connected',
+      tables: tablesExist ? 'created' : 'not_created',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      environment: process.env.NODE_ENV
+    });
+  } catch (error) {
+    console.error('Health check failed:', error);
+    res.status(503).json({
+      status: 'unhealthy',
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  }
 });
 
 // API Routes (serão adicionadas depois)

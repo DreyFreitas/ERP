@@ -36,8 +36,43 @@ model Company {
   products              Product[]
   sales                 Sale[]
   users                 User[]
+  subscriptions         Subscription[]
 
   @@map("companies")
+}
+
+model Backup {
+  id          String   @id @default(uuid())
+  filename    String
+  filePath    String
+  size        String
+  status      String   @default("completed") // completed, failed, in_progress
+  type        String   @default("full") // full, incremental
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("backups")
+}
+
+model Subscription {
+  id            String   @id @default(uuid())
+  companyId     String
+  planType      String   // basic, professional, enterprise
+  planStatus    String   // active, suspended, cancelled
+  amount        Decimal  @db.Decimal(10, 2)
+  dueDate       DateTime
+  paymentDate   DateTime?
+  status        String   @default("pending") // pending, paid, overdue, cancelled
+  paymentMethod String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relacionamentos
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
 }
 
 model User {

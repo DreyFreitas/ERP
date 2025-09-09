@@ -2,23 +2,39 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Instalar cliente do PostgreSQL para permitir pg_dump/psql
+RUN apk add --no-cache postgresql-client bash
+
 # Copiar arquivos de dependências
 COPY package*.json ./
 
-# Instalar dependências
-RUN npm ci --only=production
+# Instalar dependências (incluindo devDependencies para build)
+RUN npm ci
 
-# Copiar arquivo .env primeiro (para garantir que está disponível)
-COPY .env ./
+# Criar arquivo .env vazio (será preenchido pelas variáveis de ambiente do docker-compose)
+RUN touch .env
 
-# Copiar código fonte
-COPY . .
+# Copiar código fonte do backend
+COPY backend/package*.json ./
+COPY backend/src ./src
+COPY backend/prisma ./prisma
+COPY backend/scripts ./scripts
+COPY backend/tsconfig.json ./
 
-# Gerar cliente Prisma
+# Gerar cliente Prisma (após copiar o schema)
 RUN npx prisma generate
 
-# Criar diretório de uploads
-RUN mkdir -p uploads
+# Build do TypeScript
+RUN npm run build
+
+# Remover devDependencies após o build
+RUN npm prune --production
+
+# Criar diretórios necessários
+RUN mkdir -p uploads backups
+
+# Tornar scripts de inicialização executáveis
+RUN chmod +x scripts/start.sh scripts/portainer-start.sh
 
 # Expor porta
 EXPOSE 7001
@@ -26,5 +42,5 @@ EXPOSE 7001
 # Variável de ambiente
 ENV PORT=7001
 
-# Comando para iniciar
-CMD ["npm", "run", "dev"]
+# Comando para iniciar (usa script robusto para Portainer)
+CMD ["./scripts/portainer-start.sh"]

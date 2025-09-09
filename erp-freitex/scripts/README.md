@@ -1,143 +1,266 @@
-# Scripts de Automação - ERP Freitex Softwares
+# 📁 Scripts Organizados - ERP Freitex Softwares
 
-Este diretório contém scripts para automatizar tarefas comuns do ambiente de desenvolvimento.
+Este diretório contém scripts organizados por categoria para automatizar tarefas do ambiente de desenvolvimento.
 
-## 📋 Scripts Disponíveis
+## 📂 Estrutura Organizada
 
-### 🚀 `start-with-migrations.ps1` (Windows)
-Script completo para iniciar o ambiente Docker e aplicar migrações automaticamente.
-
-**Uso:**
-```powershell
-.\scripts\start-with-migrations.ps1
 ```
-
-**O que faz:**
-- ✅ Verifica se o Docker está rodando
-- ✅ Inicia todos os containers com `docker-compose up -d`
-- ✅ Aplica migrações do Prisma automaticamente
-- ✅ Gera o cliente Prisma
-- ✅ Verifica se os serviços estão funcionando
-- ✅ Exibe URLs de acesso
-
-### 🔄 `apply-migrations.ps1` (Windows)
-Script para aplicar migrações do Prisma quando o ambiente já está rodando.
-
-**Uso:**
-```powershell
-.\scripts\apply-migrations.ps1
+scripts/
+├── 🐳 docker/           # Scripts para Docker e migrações
+├── 🗄️ database/         # Scripts para backup e restore
+├── 🚀 deployment/       # Scripts para deploy e atualizações
+├── 🧪 testing/          # Scripts de teste e diagnóstico
+└── 📚 docs/             # Documentação
 ```
-
-**O que faz:**
-- ✅ Verifica se o container do backend está rodando
-- ✅ Aplica migrações pendentes
-- ✅ Regenera o cliente Prisma
-- ✅ Reinicia o backend
-- ✅ Verifica se está funcionando
-
-### 🔄 `apply-migrations.sh` (Linux/Mac)
-Versão bash do script de migrações para sistemas Unix.
-
-**Uso:**
-```bash
-chmod +x scripts/apply-migrations.sh
-./scripts/apply-migrations.sh
-```
-
-## 🎯 Quando Usar
-
-### Primeira vez ou após mudanças no schema:
-```powershell
-.\scripts\start-with-migrations.ps1
-```
-
-### Apenas aplicar migrações (ambiente já rodando):
-```powershell
-.\scripts\apply-migrations.ps1
-```
-
-### Após alterações no schema.prisma:
-```powershell
-.\scripts\apply-migrations.ps1
-```
-
-## 🔧 Comandos Manuais
-
-Se preferir executar manualmente:
-
-```powershell
-# Aplicar migrações
-docker exec docker-backend-1 npx prisma migrate deploy
-
-# Gerar cliente Prisma
-docker exec docker-backend-1 npx prisma generate
-
-# Reiniciar backend
-docker restart docker-backend-1
-```
-
-## 🚨 Solução de Problemas
-
-### Erro: "Container não está rodando"
-```powershell
-# Inicie o ambiente primeiro
-cd docker
-docker-compose up -d
-```
-
-### Erro: "Tabela não existe"
-```powershell
-# Execute o script de migrações
-.\scripts\apply-migrations.ps1
-```
-
-### Erro: "Docker não está rodando"
-- Inicie o Docker Desktop
-- Aguarde a inicialização completa
-- Execute o script novamente
-
-## 📝 Logs e Debug
-
-Para ver logs em tempo real:
-```powershell
-cd docker
-docker-compose logs -f
-```
-
-Para ver logs de um serviço específico:
-```powershell
-docker logs docker-backend-1 -f
-```
-
-## 🔄 Fluxo de Desenvolvimento Recomendado
-
-1. **Iniciar ambiente:**
-   ```powershell
-   .\scripts\start-with-migrations.ps1
-   ```
-
-2. **Fazer alterações no schema.prisma**
-
-3. **Criar nova migração:**
-   ```powershell
-   docker exec docker-backend-1 npx prisma migrate dev --name nome_da_migracao
-   ```
-
-4. **Aplicar migrações:**
-   ```powershell
-   .\scripts\apply-migrations.ps1
-   ```
-
-5. **Desenvolver e testar**
-
-## 🎉 Benefícios
-
-- ✅ **Automatização completa** - Não precisa lembrar comandos
-- ✅ **Verificação de erros** - Scripts param se algo der errado
-- ✅ **Feedback visual** - Cores e emojis para facilitar leitura
-- ✅ **Cross-platform** - Scripts para Windows e Unix
-- ✅ **Prevenção de erros** - Evita problemas de migrações não aplicadas
 
 ---
 
-**💡 Dica:** Sempre execute os scripts após fazer alterações no schema do Prisma para evitar erros de tabelas não existentes!
+## 🐳 **Docker** (`docker/`)
+
+Scripts para gerenciar containers Docker e migrações do banco de dados.
+
+### **Scripts Disponíveis:**
+
+#### `start-with-migrations.ps1` ⭐ **MAIS USADO**
+**Inicialização completa do ambiente**
+```powershell
+.\scripts\docker\start-with-migrations.ps1
+```
+- ✅ Verifica Docker
+- ✅ Inicia containers
+- ✅ Aplica migrações
+- ✅ Gera cliente Prisma
+- ✅ Verifica serviços
+
+#### `apply-migrations.ps1/.sh`
+**Aplicar migrações (ambiente já rodando)**
+```powershell
+.\scripts\docker\apply-migrations.ps1
+```
+- ✅ Aplica migrações pendentes
+- ✅ Regenera cliente Prisma
+- ✅ Reinicia backend
+
+#### `safe-migration.ps1/.sh`
+**Migração segura com backup**
+```powershell
+.\scripts\docker\safe-migration.ps1
+```
+- ✅ Backup automático
+- ✅ Aplica migrações
+- ✅ Rollback se necessário
+
+---
+
+## 🗄️ **Database** (`database/`)
+
+Scripts para backup, restore e verificação do banco de dados.
+
+### **Scripts Disponíveis:**
+
+#### `backup-database.ps1/.sh`
+**Backup completo do banco**
+```powershell
+.\scripts\database\backup-database.ps1
+```
+- ✅ Backup com timestamp
+- ✅ Compressão automática
+- ✅ Verificação de integridade
+
+#### `restore-database.ps1/.sh`
+**Restore do banco de dados**
+```powershell
+.\scripts\database\restore-database.ps1
+```
+- ✅ Lista backups disponíveis
+- ✅ Restore com confirmação
+- ✅ Verificação pós-restore
+
+#### `verify-backup.sh`
+**Verificar integridade do backup**
+```bash
+./scripts/database/verify-backup.sh
+```
+
+---
+
+## 🚀 **Deployment** (`deployment/`)
+
+Scripts para deploy e atualizações das imagens Docker.
+
+### **Scripts Disponíveis:**
+
+#### `quick-update.ps1/.sh` ⭐ **MAIS USADO**
+**Atualização rápida das imagens**
+```powershell
+# Atualizar todas as imagens
+.\scripts\deployment\quick-update.ps1
+
+# Atualizar apenas frontend
+.\scripts\deployment\quick-update.ps1 -Frontend
+
+# Atualizar apenas backend
+.\scripts\deployment\quick-update.ps1 -Backend
+
+# Atualizar apenas nginx
+.\scripts\deployment\quick-update.ps1 -Nginx
+
+# Com versão específica
+.\scripts\deployment\quick-update.ps1 -Version "v1.2.0"
+```
+
+#### `build-and-push.ps1/.sh`
+**Build e push completo para Docker Hub**
+```powershell
+.\scripts\deployment\build-and-push.ps1 -DockerUsername "dreyfreitas"
+```
+
+---
+
+## 🧪 **Testing** (`testing/`)
+
+Scripts para testes e diagnóstico do sistema.
+
+### **Scripts Disponíveis:**
+
+#### `test-docker-hub-images.ps1`
+**Testar imagens do Docker Hub**
+```powershell
+.\scripts\testing\test-docker-hub-images.ps1
+```
+- ✅ Verifica imagens locais
+- ✅ Testa execução
+- ✅ Valida funcionamento
+
+#### `test-print-automated.ps1`
+**Teste automatizado de impressão**
+```powershell
+.\scripts\testing\test-print-automated.ps1
+```
+- ✅ Testa configuração de impressoras
+- ✅ Simula impressão de comprovante
+- ✅ Verifica funcionamento
+
+#### `fix-printer.ps1`
+**Diagnóstico e correção de impressoras**
+```powershell
+.\scripts\testing\fix-printer.ps1
+```
+- ✅ Lista impressoras instaladas
+- ✅ Verifica status
+- ✅ Sugere correções
+
+---
+
+## 🎯 **Fluxo de Trabalho Recomendado**
+
+### **1. Desenvolvimento Diário**
+```powershell
+# Iniciar ambiente
+.\scripts\docker\start-with-migrations.ps1
+
+# Fazer alterações no código...
+
+# Atualizar imagens
+.\scripts\deployment\quick-update.ps1
+```
+
+### **2. Após Alterações no Schema**
+```powershell
+# Aplicar migrações
+.\scripts\docker\apply-migrations.ps1
+```
+
+### **3. Backup Antes de Mudanças Importantes**
+```powershell
+# Backup completo
+.\scripts\database\backup-database.ps1
+
+# Fazer alterações...
+
+# Se necessário, restaurar
+.\scripts\database\restore-database.ps1
+```
+
+### **4. Deploy para Produção**
+```powershell
+# Build e push completo
+.\scripts\deployment\build-and-push.ps1 -DockerUsername "dreyfreitas"
+```
+
+---
+
+## 📚 **Documentação**
+
+- `DEPLOY_SUMMARY.md` - Resumo do deploy para Docker Hub
+- `DOCKER_HUB_DEPLOY.md` - Guia completo de deploy
+
+---
+
+## 🚨 **Troubleshooting**
+
+### **Docker não está rodando**
+```powershell
+# Iniciar Docker Desktop
+# Aguardar inicialização completa
+# Executar script novamente
+```
+
+### **Erro de migração**
+```powershell
+# Fazer backup primeiro
+.\scripts\database\backup-database.ps1
+
+# Aplicar migrações
+.\scripts\docker\apply-migrations.ps1
+```
+
+### **Erro de push para Docker Hub**
+```powershell
+# Verificar login
+docker login
+
+# Executar push novamente
+.\scripts\deployment\quick-update.ps1
+```
+
+---
+
+## 💡 **Dicas Importantes**
+
+### **Scripts Mais Usados:**
+1. `docker/start-with-migrations.ps1` - Inicialização
+2. `deployment/quick-update.ps1` - Atualizações
+3. `docker/apply-migrations.ps1` - Migrações
+4. `database/backup-database.ps1` - Backup
+
+### **Ordem de Execução:**
+1. **Iniciar**: `start-with-migrations.ps1`
+2. **Desenvolver**: Fazer alterações
+3. **Migrar**: `apply-migrations.ps1` (se necessário)
+4. **Atualizar**: `quick-update.ps1`
+5. **Testar**: Scripts em `testing/`
+
+### **Backup Regular:**
+- ✅ Antes de mudanças importantes
+- ✅ Semanalmente
+- ✅ Antes de deploys
+
+---
+
+## 🎉 **Benefícios da Organização**
+
+- ✅ **Fácil localização** - Scripts organizados por função
+- ✅ **Menos confusão** - Sem duplicatas
+- ✅ **Manutenção simples** - Estrutura clara
+- ✅ **Documentação atualizada** - Guias específicos
+- ✅ **Fluxo otimizado** - Scripts mais usados em destaque
+
+---
+
+**💡 Dica**: Use os scripts em `deployment/` para atualizações e `docker/` para gerenciar o ambiente!
+
+---
+
+**Última atualização**: Dezembro 2024  
+**Versão**: 2.0 (Organizada)
