@@ -37,6 +37,7 @@ model Company {
   sales                 Sale[]
   users                 User[]
   subscriptions         Subscription[]
+  apiKeys              ApiKey[]
 
   @@map("companies")
 }
@@ -437,6 +438,22 @@ model Printer {
 
   @@unique([companyId, name])
   @@map("printers")
+}
+
+model ApiKey {
+  id           String   @id @default(uuid())
+  companyId    String   @map("company_id")
+  name         String
+  key          String   @unique
+  permissions  String[] // Array de permissões
+  isActive     Boolean  @default(true) @map("is_active")
+  lastUsed     DateTime? @map("last_used")
+  usageCount   Int      @default(0) @map("usage_count")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("api_keys")
 }
 
 enum UserRole {

@@ -1,11 +1,13 @@
 version: '3.8'
 
-# Docker Compose para produção usando imagens do Docker Hub
-# Substitua 'seu-username' pelo seu username do Docker Hub
+# Docker Compose para desenvolvimento local
+# Usa builds locais em vez de imagens do Docker Hub
 
 services:
   nginx:
-    image: dreyfreitas/erp-freitex-nginx:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nginx
     ports:
       - "7000:80"
     depends_on:
@@ -15,7 +17,9 @@ services:
       - erp-network
 
   frontend:
-    image: dreyfreitas/erp-freitex-frontend:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
     expose:
       - "7000"
     environment:
@@ -27,7 +31,9 @@ services:
       - erp-network
 
   backend:
-    image: dreyfreitas/erp-freitex-backend:latest
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
     expose:
       - "7001"
     environment:

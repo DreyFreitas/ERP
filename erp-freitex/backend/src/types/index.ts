@@ -74,6 +74,25 @@ export interface AuthRequest extends Request {
   companyId?: string;
 }
 
+// Tipos de API Key
+export interface ApiKey {
+  id: string;
+  companyId: string;
+  name: string;
+  key: string;
+  permissions: string[];
+  isActive: boolean;
+  lastUsed?: Date;
+  usageCount: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ApiKeyRequest extends Request {
+  apiKey?: ApiKey;
+  companyId?: string;
+}
+
 // Tipos de API
 export interface ApiResponse<T = any> {
   success: boolean;

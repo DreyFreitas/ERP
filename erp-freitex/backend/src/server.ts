@@ -22,6 +22,8 @@ import paymentTermRoutes from './routes/paymentTerms';
 import salesRoutes from './routes/sales';
 import backupRoutes from './routes/backupRoutes';
 import subscriptionRoutes from './routes/subscriptionRoutes';
+import apiKeyRoutes from './routes/apiKeyRoutes';
+import ecommerceApiRoutes from './routes/ecommerceApiRoutes';
 
 
 
@@ -83,6 +85,8 @@ app.use('/api/payment-terms', paymentTermRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api/v1', ecommerceApiRoutes);
 
 
 
