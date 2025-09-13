@@ -24,6 +24,7 @@ import backupRoutes from './routes/backupRoutes';
 import subscriptionRoutes from './routes/subscriptionRoutes';
 import apiKeyRoutes from './routes/apiKeyRoutes';
 import ecommerceApiRoutes from './routes/ecommerceApiRoutes';
+import reportsRoutes from './routes/reports';
 
 
 
@@ -86,6 +87,7 @@ app.use('/api/sales', salesRoutes);
 app.use('/api/backup', backupRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/api-keys', apiKeyRoutes);
+app.use('/api/reports', reportsRoutes);
 app.use('/api/v1', ecommerceApiRoutes);
 
 

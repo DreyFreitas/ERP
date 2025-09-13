@@ -1,0 +1,111 @@
+version: '3.8'
+
+# Docker Compose para DESENVOLVIMENTO ULTRA-RÁPIDO
+# Usa volumes para hot-reload - SEM BUILD!
+
+services:
+  nginx:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.nginx
+    ports:
+      - "7000:80"
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - erp-network
+
+  frontend:
+    image: node:18-alpine
+    working_dir: /app
+    expose:
+      - "3000"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm start"
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - REACT_APP_API_URL=/api
+    networks:
+      - erp-network
+
+  backend:
+    image: node:18-alpine
+    working_dir: /app
+    expose:
+      - "7001"
+    volumes:
+      - ../backend:/app
+      - /app/node_modules
+    command: sh -c "npm install && npm run dev"
+    environment:
+      - PORT=7001
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/erp_freitex?schema=public
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - NODE_ENV=development
+      - UPLOAD_DIR=uploads
+      - MAX_FILE_SIZE=10485760
+      - BACKUP_DIR=backups
+      - BACKUP_RETENTION_DAYS=30
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=debug
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - erp-network
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "7002:5432"
+    environment:
+      - POSTGRES_DB=erp_freitex
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/01-init-db.sql:ro
+      - ./init-db-alternative.sql:/docker-entrypoint-initdb.d/02-init-db-alternative.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d erp_freitex"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - erp-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "7003:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - erp-network
+
+  adminer:
+    image: adminer:latest
+    ports:
+      - "7004:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+    depends_on:
+      - postgres
+    networks:
+      - erp-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  erp-network:
+    driver: bridge
